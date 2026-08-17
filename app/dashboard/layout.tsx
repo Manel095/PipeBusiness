@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Workflow, LayoutDashboard, BarChart3, Settings, Search, ChevronRight, LogOut, Plus } from "lucide-react"
+import { Workflow, LayoutDashboard, BarChart3, Settings, Search, ChevronRight, LogOut, Plus, Link2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { actions, useWorkspace } from "@/lib/store"
@@ -10,6 +10,7 @@ import { CommandPalette } from "@/components/dashboard/command-palette"
 
 const NAV_ITEMS = [
   { label: "Workspace", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Connections", href: "/dashboard/connections", icon: Link2 },
   { label: "Intelligence", href: "/dashboard/intelligence", icon: BarChart3 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
@@ -139,7 +140,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="dashboard-topbar">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-foreground">
-              {pathname === "/dashboard" ? "Workspace" : pathname === "/dashboard/intelligence" ? "Intelligence" : "Settings"}
+              {pathname === "/dashboard" 
+                ? "Workspace" 
+                : pathname === "/dashboard/connections" 
+                ? "Connections" 
+                : pathname === "/dashboard/intelligence" 
+                ? "Intelligence" 
+                : "Settings"}
             </span>
           </div>
           <button

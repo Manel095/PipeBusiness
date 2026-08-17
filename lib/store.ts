@@ -12,6 +12,7 @@ export type DataSource = {
   type: DataSourceType
   name: string
   config: Record<string, string>
+  entityType?: "client" | "project" | "task" | "sale"
   createdAt: number
 }
 

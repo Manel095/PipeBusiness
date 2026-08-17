@@ -2,292 +2,230 @@
 
 import { useState, useMemo } from "react"
 import { useWorkspace } from "@/lib/store"
-import { Area, AreaChart, Bar, BarChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Plus, TrendingUp, TrendingDown, BarChart3 } from "lucide-react"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { TrendingUp, TrendingDown, AlertCircle, Activity, ArrowRight } from "lucide-react"
 
 const TIME_RANGES = [
   { key: "7d", label: "7 days", days: 7 },
   { key: "30d", label: "30 days", days: 30 },
   { key: "90d", label: "90 days", days: 90 },
-  { key: "all", label: "All time", days: 9999 },
 ]
-
-const CHART_TYPES = ["area", "line", "bar"] as const
-type ChartType = (typeof CHART_TYPES)[number]
-
-const ACCENT_COLORS = ["#FF0083", "#6366F1", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6"]
 
 export default function IntelligencePage() {
   const workspace = useWorkspace()
   const [timeRange, setTimeRange] = useState("30d")
-  const [charts, setCharts] = useState<{ id: string; processId: string; metric: string; type: ChartType }[]>(() => {
-    // Auto-generate initial charts from available data
-    const initial: { id: string; processId: string; metric: string; type: ChartType }[] = []
-    workspace.processes.forEach((proc, i) => {
-      if (proc.data.length === 0) return
-      const keys = Object.keys(proc.data[0]).filter((k) => k !== "date")
-      if (keys[0]) {
-        initial.push({
-          id: `chart-${i}`,
-          processId: proc.id,
-          metric: keys[0],
-          type: i % 3 === 0 ? "area" : i % 3 === 1 ? "line" : "bar",
-        })
-      }
-    })
-    return initial
-  })
-
   const days = TIME_RANGES.find((t) => t.key === timeRange)?.days ?? 30
 
-  // Summary stats
-  const summaryStats = useMemo(() => {
-    return workspace.processes.map((proc) => {
+  // 1. Calculate Conversion Rates based on Connections
+  const conversions = useMemo(() => {
+    return workspace.connections.map(conn => {
+      const fromProc = workspace.processes.find(p => p.id === conn.from)
+      const toProc = workspace.processes.find(p => p.id === conn.to)
+      
+      if (!fromProc || !toProc || fromProc.data.length === 0 || toProc.data.length === 0) return null
+
+      // Get data for the selected time range
+      const fromData = fromProc.data.slice(-days)
+      const toData = toProc.data.slice(-days)
+
+      // Naive primary metric selection (first non-date key)
+      const fromMetric = Object.keys(fromData[0]).find(k => k !== "date") || ""
+      const toMetric = Object.keys(toData[0]).find(k => k !== "date") || ""
+
+      // Sum volumes
+      const fromTotal = fromData.reduce((acc, row) => acc + Number(row[fromMetric] || 0), 0)
+      const toTotal = toData.reduce((acc, row) => acc + Number(row[toMetric] || 0), 0)
+
+      const conversionRate = fromTotal > 0 ? (toTotal / fromTotal) * 100 : 0
+      
+      // Dynamic threshold: If conversion is < 15%, flag as bottleneck
+      const isBottleneck = conversionRate < 15 && fromTotal > 0
+
+      return {
+        id: conn.id,
+        fromProc,
+        toProc,
+        fromMetric,
+        toMetric,
+        fromTotal,
+        toTotal,
+        conversionRate,
+        isBottleneck
+      }
+    }).filter(Boolean) as any[]
+  }, [workspace.connections, workspace.processes, days])
+
+  // 2. Aggregate Entity Flow Trends (Primary charts)
+  const charts = useMemo(() => {
+    return workspace.processes.map(proc => {
       if (proc.data.length === 0) return null
-      const keys = Object.keys(proc.data[0]).filter((k) => k !== "date")
-      const mainKey = keys[0]
-      if (!mainKey) return null
       const sliced = proc.data.slice(-days)
-      const latest = Number(sliced[sliced.length - 1]?.[mainKey] ?? 0)
-      const first = Number(sliced[0]?.[mainKey] ?? latest)
-      const delta = first !== 0 ? ((latest - first) / first) * 100 : 0
-      return { proc, mainKey, latest, delta }
-    }).filter(Boolean) as { proc: typeof workspace.processes[0]; mainKey: string; latest: number; delta: number }[]
+      const primaryMetric = Object.keys(sliced[0]).find(k => k !== "date") || ""
+      
+      // Calculate delta
+      const latest = Number(sliced[sliced.length - 1]?.[primaryMetric] ?? 0)
+      const prev = Number(sliced[0]?.[primaryMetric] ?? latest)
+      const delta = prev !== 0 ? ((latest - prev) / prev) * 100 : 0
+
+      return { proc, primaryMetric, data: sliced, latest, delta }
+    }).filter(Boolean) as any[]
   }, [workspace.processes, days])
 
-  const addChart = () => {
-    const proc = workspace.processes.find((p) => p.data.length > 0)
-    if (!proc) return
-    const keys = Object.keys(proc.data[0]).filter((k) => k !== "date")
-    if (keys.length === 0) return
-    setCharts((prev) => [
-      ...prev,
-      {
-        id: `chart-${Date.now()}`,
-        processId: proc.id,
-        metric: keys[Math.floor(Math.random() * keys.length)],
-        type: CHART_TYPES[Math.floor(Math.random() * CHART_TYPES.length)],
-      },
-    ])
-  }
-
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-surface/30">
       {/* Header */}
-      <div className="border-b border-border px-6 py-5">
-        <h1 className="text-2xl font-extrabold tracking-tight">Business Intelligence</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Dynamic charts and reports from your connected processes
-        </p>
-      </div>
-
-      {/* Time range selector */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
+      <div className="border-b border-border bg-background px-8 py-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Business Intelligence</h1>
+          <p className="mt-2 text-muted-foreground">
+            Dynamic bottleneck analysis and entity flow across your connected processes.
+          </p>
+        </div>
         <div className="flex gap-1 rounded-full border border-border bg-surface p-1">
           {TIME_RANGES.map((t) => (
             <button
               key={t.key}
               type="button"
               onClick={() => setTimeRange(t.key)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                 timeRange === t.key
-                  ? "bg-brand text-brand-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-brand text-brand-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background"
               }`}
             >
               {t.label}
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={addChart}
-          className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-transform hover:scale-[1.02]"
-        >
-          <Plus className="h-4 w-4" />
-          Add chart
-        </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 px-6 pt-5 md:grid-cols-3 lg:grid-cols-5">
-        {summaryStats.map((stat) => (
-          <div
-            key={stat.proc.id}
-            className="rounded-2xl border border-border bg-background p-4"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-base">{stat.proc.icon}</span>
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                {stat.proc.name}
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-extrabold text-foreground">
-              {stat.latest.toLocaleString()}
-            </p>
-            <div className="mt-1 flex items-center gap-1">
-              {stat.delta >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-              )}
-              <span
-                className={`text-xs font-semibold ${
-                  stat.delta >= 0 ? "text-emerald-600" : "text-red-600"
-                }`}
-              >
-                {stat.delta >= 0 ? "+" : ""}
-                {stat.delta.toFixed(1)}%
-              </span>
-              <span className="text-xs text-muted-foreground capitalize">{stat.mainKey.replace(/_/g, " ")}</span>
-            </div>
+      <div className="p-8 max-w-7xl mx-auto space-y-10">
+
+        {/* Conversion Analysis Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="w-5 h-5 text-brand" />
+            <h2 className="text-xl font-bold">Conversion Analysis</h2>
           </div>
-        ))}
-      </div>
-
-      {/* Charts Grid */}
-      <div className="bi-grid mt-2">
-        {charts.map((chart, chartIdx) => {
-          const proc = workspace.processes.find((p) => p.id === chart.processId)
-          if (!proc || proc.data.length === 0) return null
-          const sliced = proc.data.slice(-days)
-          const color = ACCENT_COLORS[chartIdx % ACCENT_COLORS.length]
-          const config = { [chart.metric]: { label: chart.metric.replace(/_/g, " "), color } }
-          const allMetrics = Object.keys(proc.data[0]).filter((k) => k !== "date")
-
-          return (
-            <div key={chart.id} className="bi-card">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span>{proc.icon}</span>
-                  <div>
-                    <p className="text-sm font-semibold capitalize">{chart.metric.replace(/_/g, " ")}</p>
-                    <p className="text-xs text-muted-foreground">{proc.name}</p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  {/* Metric selector */}
-                  <select
-                    value={chart.metric}
-                    onChange={(e) => {
-                      setCharts((prev) =>
-                        prev.map((c) =>
-                          c.id === chart.id ? { ...c, metric: e.target.value } : c
-                        )
-                      )
-                    }}
-                    className="rounded-lg border border-border bg-surface px-2 py-1 text-xs"
-                  >
-                    {allMetrics.map((m) => (
-                      <option key={m} value={m}>
-                        {m.replace(/_/g, " ")}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Chart type selector */}
-                  <div className="flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-                    {CHART_TYPES.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() =>
-                          setCharts((prev) =>
-                            prev.map((c) => (c.id === chart.id ? { ...c, type: t } : c))
-                          )
-                        }
-                        className={`rounded-md px-2 py-1 text-[10px] font-semibold capitalize transition-colors ${
-                          chart.type === t
-                            ? "bg-brand text-brand-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Current value */}
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-3xl font-extrabold text-foreground">
-                  {Number(sliced[sliced.length - 1]?.[chart.metric] ?? 0).toLocaleString()}
-                </span>
-                <span className="text-xs text-muted-foreground">latest</span>
-              </div>
-
-              <ChartContainer config={config} className="h-[200px] w-full">
-                {chart.type === "area" ? (
-                  <AreaChart data={sliced} margin={{ left: 0, right: 8, top: 4 }}>
-                    <CartesianGrid vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                    <YAxis tickLine={false} axisLine={false} width={40} fontSize={10} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <defs>
-                      <linearGradient id={`fill-${chart.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={color} stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      dataKey={chart.metric}
-                      type="monotone"
-                      stroke={color}
-                      strokeWidth={2}
-                      fill={`url(#fill-${chart.id})`}
-                      isAnimationActive={false}
-                      dot={false}
-                    />
-                  </AreaChart>
-                ) : chart.type === "line" ? (
-                  <LineChart data={sliced} margin={{ left: 0, right: 8, top: 4 }}>
-                    <CartesianGrid vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                    <YAxis tickLine={false} axisLine={false} width={40} fontSize={10} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line
-                      dataKey={chart.metric}
-                      type="monotone"
-                      stroke={color}
-                      strokeWidth={2}
-                      isAnimationActive={false}
-                      dot={false}
-                    />
-                  </LineChart>
-                ) : (
-                  <BarChart data={sliced} margin={{ left: 0, right: 8, top: 4 }}>
-                    <CartesianGrid vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                    <YAxis tickLine={false} axisLine={false} width={40} fontSize={10} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey={chart.metric} fill={color} radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                )}
-              </ChartContainer>
+          
+          {conversions.length === 0 ? (
+            <div className="border border-dashed border-border rounded-xl p-10 text-center bg-background">
+              <p className="text-muted-foreground">Connect processes in the workspace to see conversion bottlenecks.</p>
             </div>
-          )
-        })}
-      </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {conversions.map(conv => (
+                <div key={conv.id} className={`rounded-2xl border bg-background p-6 shadow-sm transition-shadow hover:shadow-md ${conv.isBottleneck ? 'border-red-500/30' : 'border-border'}`}>
+                  
+                  {/* Nodes header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-lg shadow-sm">
+                        {conv.fromProc.icon}
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-lg shadow-sm">
+                        {conv.toProc.icon}
+                      </div>
+                    </div>
+                    {conv.isBottleneck ? (
+                      <span className="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-500/10 px-2.5 py-1 rounded-full">
+                        <AlertCircle className="w-3.5 h-3.5" /> Bottleneck
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">
+                        <TrendingUp className="w-3.5 h-3.5" /> Healthy
+                      </span>
+                    )}
+                  </div>
 
-      {/* Empty state */}
-      {charts.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-semibold text-foreground">No charts yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add your first chart to start visualizing your business data
-          </p>
-          <button
-            type="button"
-            onClick={addChart}
-            className="mt-4 flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground"
-          >
-            <Plus className="h-4 w-4" />
-            Add chart
-          </button>
-        </div>
-      )}
+                  {/* Flow Data */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground capitalize">{conv.fromMetric.replace(/_/g, " ")} (In)</span>
+                      <span className="font-bold">{conv.fromTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground capitalize">{conv.toMetric.replace(/_/g, " ")} (Out)</span>
+                      <span className="font-bold">{conv.toTotal.toLocaleString()}</span>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-border flex justify-between items-center">
+                      <span className="text-sm font-semibold">Conversion Rate</span>
+                      <span className={`text-2xl font-extrabold ${conv.isBottleneck ? 'text-red-500' : 'text-emerald-600'}`}>
+                        {conv.conversionRate.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Entity Flow Trends */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-brand" />
+            <h2 className="text-xl font-bold">Entity Flow Trends</h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {charts.map(chart => (
+              <div key={chart.proc.id} className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface border border-border text-xl">
+                      {chart.proc.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold">{chart.proc.name}</h3>
+                      <p className="text-xs text-muted-foreground capitalize tracking-wide">{chart.primaryMetric.replace(/_/g, " ")}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-extrabold">{chart.latest.toLocaleString()}</div>
+                    <div className={`text-xs font-bold flex items-center justify-end gap-1 ${chart.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {chart.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {Math.abs(chart.delta).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-48 w-full mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chart.data} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id={`gradient-${chart.proc.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={chart.proc.color} stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={chart.proc.color} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide domain={['dataMin', 'dataMax']} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--background)' }}
+                        itemStyle={{ color: 'var(--foreground)', fontWeight: 'bold' }}
+                        labelStyle={{ color: 'var(--muted-foreground)', marginBottom: '4px' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey={chart.primaryMetric} 
+                        stroke={chart.proc.color} 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill={`url(#gradient-${chart.proc.id})`} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+      </div>
     </div>
   )
 }
