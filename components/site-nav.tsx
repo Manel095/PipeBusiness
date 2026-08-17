@@ -36,13 +36,13 @@ export function SiteNav() {
 
         <div className="hidden items-center gap-3 md:flex">
           <a
-            href="#"
+            href="/dashboard"
             className="text-sm font-semibold text-foreground transition-colors hover:text-brand"
           >
             Log in
           </a>
           <a
-            href="#cta"
+            href="/dashboard"
             className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-transform hover:scale-[1.03]"
           >
             Start free
@@ -73,7 +73,7 @@ export function SiteNav() {
               </a>
             ))}
             <a
-              href="#cta"
+              href="/dashboard"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full bg-brand px-5 py-3 text-center text-sm font-semibold text-brand-foreground"
             >
