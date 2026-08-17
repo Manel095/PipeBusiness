@@ -113,6 +113,31 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
             ))}
           </div>
         )}
+
+        {/* Nested Steps Visualization */}
+        {process.steps && process.steps.length > 0 && (
+          <div className="px-3 pb-3">
+            <div className="mt-2 pt-2 border-t border-border flex flex-col gap-2">
+              {process.steps.map((step, idx) => (
+                <div key={step.id} className="flex items-center gap-2 relative">
+                  {/* Step Connector Line */}
+                  {idx !== process.steps!.length - 1 && (
+                    <div className="absolute left-[5px] top-[14px] w-[2px] h-[14px] bg-border" />
+                  )}
+                  {/* Status Dot */}
+                  <div className={`w-3 h-3 rounded-full border-[2px] z-10 flex-shrink-0 ${
+                    step.status === "completed" ? "bg-emerald-500 border-emerald-500" :
+                    step.status === "in_progress" ? "bg-brand border-brand" :
+                    "bg-transparent border-muted-foreground/50"
+                  }`} />
+                  <span className={`text-[11px] truncate ${step.status === "pending" ? "text-muted-foreground" : "text-foreground font-medium"}`}>
+                    {step.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Connection ports */}

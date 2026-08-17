@@ -23,7 +23,7 @@ const SOURCE_ICONS: Record<string, React.ReactNode> = {
 export function ProcessDetail({ processId }: { processId: string }) {
   const workspace = useWorkspace()
   const process = workspace.processes.find((p) => p.id === processId)
-  const [activeTab, setActiveTab] = useState<"sources" | "data" | "metrics">("sources")
+  const [activeTab, setActiveTab] = useState<"sources" | "entities" | "data" | "metrics">("sources")
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(process?.name ?? "")
 
@@ -31,6 +31,7 @@ export function ProcessDetail({ processId }: { processId: string }) {
 
   const tabs = [
     { key: "sources" as const, label: "Data Sources" },
+    { key: "entities" as const, label: "Entities" },
     { key: "data" as const, label: "Data Preview" },
     { key: "metrics" as const, label: "Metrics" },
   ]
@@ -165,6 +166,43 @@ export function ProcessDetail({ processId }: { processId: string }) {
               <Plus className="h-4 w-4" />
               Add data source
             </button>
+          </div>
+        )}
+
+        {activeTab === "entities" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Track entity lifecycle (Clients → Projects → Tasks) flowing through this engine.
+            </p>
+            <div className="space-y-3">
+              {/* Mock Entities */}
+              {["Client: Onabitz", "Client: Acme Corp", "Client: Globex"].map((client, i) => (
+                <div key={client} className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm text-foreground">{client}</h4>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand">Active</span>
+                  </div>
+                  
+                  {i === 0 && (
+                    <div className="mt-3 pl-3 border-l-2 border-border/50 space-y-2">
+                      <div className="text-xs text-muted-foreground font-medium">↳ Project: Website Redesign</div>
+                      <div className="pl-4 space-y-1">
+                        <div className="text-xs flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          <span className="text-foreground">Design wireframes</span>
+                          <span className="text-muted-foreground ml-auto">ClickUp</span>
+                        </div>
+                        <div className="text-xs flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-brand"></div>
+                          <span className="text-foreground">Frontend development</span>
+                          <span className="text-muted-foreground ml-auto">ClickUp</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

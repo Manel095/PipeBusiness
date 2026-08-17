@@ -40,6 +40,11 @@ export const DEMO_PROCESSES: ProcessNode[] = [
       impressions: Math.round(5000 + i * 40 + Math.random() * 1000),
       clicks: Math.round(400 + i * 3 + Math.random() * 60),
     })),
+    steps: [
+      { id: uid("step"), name: "Capture Lead", status: "completed" },
+      { id: uid("step"), name: "Classify (AI)", status: "in_progress" },
+      { id: uid("step"), name: "Conversion Routing", status: "pending" },
+    ],
   },
   {
     id: "proc-sales",
@@ -60,6 +65,11 @@ export const DEMO_PROCESSES: ProcessNode[] = [
       meetings: Math.round(5 + Math.random() * 4),
       conversion_rate: +(18 + Math.sin(i / 12) * 5 + Math.random() * 3).toFixed(1),
     })),
+    steps: [
+      { id: uid("step"), name: "Qualification Call", status: "completed" },
+      { id: uid("step"), name: "Proposal Sent", status: "in_progress" },
+      { id: uid("step"), name: "Negotiation", status: "pending" },
+    ],
   },
   {
     id: "proc-operations",

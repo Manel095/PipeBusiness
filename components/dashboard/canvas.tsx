@@ -6,6 +6,7 @@ import { ProcessNode } from "./process-node"
 import { ConnectionLine } from "./connection-line"
 import { ProcessDetail } from "./process-detail"
 import { DataImportModal } from "./data-import-modal"
+import { ConnectionModal } from "./connection-modal"
 import { Plus, Link2, Undo2, Redo2 } from "lucide-react"
 
 export function Canvas() {
@@ -230,6 +231,11 @@ export function Canvas() {
       {/* Data Import Modal */}
       {workspace.showDataImport && workspace.selectedProcessId && (
         <DataImportModal processId={workspace.selectedProcessId} />
+      )}
+
+      {/* Connection Mapping Modal */}
+      {workspace.showConnectionMappingId && (
+        <ConnectionModal connectionId={workspace.showConnectionMappingId} />
       )}
     </>
   )

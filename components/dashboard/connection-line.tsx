@@ -15,6 +15,13 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
   const dx = to.x - from.x
   const midX = dx * 0.5
   const pathD = `M${from.x},${from.y} C${from.x + midX},${from.y} ${to.x - midX},${to.y} ${to.x},${to.y}`
+  const labelX = (from.x + to.x) / 2
+  const labelY = (from.y + to.y) / 2
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    actions.openConnectionMapping(id)
+  }
 
   return (
     <g>
@@ -28,7 +35,7 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
           style={{ cursor: "pointer", pointerEvents: "stroke" }}
           onClick={(e) => {
             e.stopPropagation()
-            // Could select connection or show delete option
+            actions.openConnectionMapping(id)
           }}
         />
       )}
@@ -41,6 +48,8 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
         strokeWidth={preview ? 1.5 : 2}
         strokeDasharray={preview ? "6 4" : "none"}
         opacity={preview ? 0.6 : 1}
+        className="cursor-pointer hover:stroke-brand/50 transition-colors"
+        onClick={handleClick}
       />
 
       {/* Animated flow particle */}
@@ -57,23 +66,35 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
 
       {/* Label */}
       {label && !preview && (
-        <text
-          x={(from.x + to.x) / 2}
-          y={(from.y + to.y) / 2 - 10}
-          textAnchor="middle"
-          fontSize={11}
-          fontWeight={600}
-          fill="var(--muted-foreground)"
-          style={{ pointerEvents: "none" }}
-        >
-          {label}
-        </text>
+        <g transform={`translate(${labelX}, ${labelY - 10})`} onClick={handleClick} className="cursor-pointer">
+          <rect
+            x={-30}
+            y={-12}
+            width={60}
+            height={24}
+            fill="var(--surface)"
+            rx={12}
+            stroke="var(--border)"
+            className="hover:stroke-brand/50 transition-colors"
+          />
+          <text
+            x={0}
+            y={4}
+            textAnchor="middle"
+            fill="var(--muted-foreground)"
+            fontSize={11}
+            fontWeight={600}
+            className="pointer-events-none"
+          >
+            {label}
+          </text>
+        </g>
       )}
 
       {/* Delete button on hover */}
       {!preview && selected && (
         <g
-          transform={`translate(${(from.x + to.x) / 2}, ${(from.y + to.y) / 2})`}
+          transform={`translate(${labelX}, ${labelY + 15})`}
           style={{ cursor: "pointer", pointerEvents: "all" }}
           onClick={(e) => {
             e.stopPropagation()

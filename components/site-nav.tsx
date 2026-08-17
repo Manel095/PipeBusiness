@@ -5,8 +5,9 @@ import { Workflow, Menu, X } from "lucide-react"
 
 const links = [
   { label: "Features", href: "#features" },
-  { label: "How it works", href: "#how-it-works" },
+  { label: "Integrations", href: "#integrations" },
   { label: "Pricing", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
 ]
 
 export function SiteNav() {

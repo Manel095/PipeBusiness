@@ -126,7 +126,7 @@ create policy "Users own subscriptions" on public.subscriptions
   for all using (auth.uid() = user_id);
 
 -- Triggers to automatically create profile and workspace on signup
-create or function public.handle_new_user()
+create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   new_workspace_id uuid;

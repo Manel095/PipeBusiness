@@ -17,6 +17,12 @@ export type DataSource = {
 
 export type DataRow = Record<string, string | number>
 
+export type ProcessStep = {
+  id: string
+  name: string
+  status: "pending" | "in_progress" | "completed"
+}
+
 export type ProcessNode = {
   id: string
   name: string
@@ -26,6 +32,7 @@ export type ProcessNode = {
   color: string
   dataSources: DataSource[]
   data: DataRow[]
+  steps?: ProcessStep[]
   status: "active" | "draft" | "paused"
 }
 
@@ -34,6 +41,7 @@ export type Connection = {
   from: string
   to: string
   label?: string
+  schemaMapping?: Record<string, string>
 }
 
 export type WorkspaceState = {
@@ -44,6 +52,7 @@ export type WorkspaceState = {
   showProcessDetail: boolean
   showDataImport: boolean
   showCommandPalette: boolean
+  showConnectionMappingId: string | null
   canvasOffset: Position
   canvasZoom: number
 }
@@ -57,6 +66,7 @@ const INITIAL: WorkspaceState = {
   showProcessDetail: false,
   showDataImport: false,
   showCommandPalette: false,
+  showConnectionMappingId: null,
   canvasOffset: { x: 0, y: 0 },
   canvasZoom: 1,
 }
@@ -110,6 +120,20 @@ export const actions = {
     emit()
   },
 
+  updateProcessStep(processId: string, stepId: string, patch: Partial<ProcessStep>) {
+    state = {
+      ...state,
+      processes: state.processes.map((p) => {
+        if (p.id !== processId || !p.steps) return p
+        return {
+          ...p,
+          steps: p.steps.map((s) => (s.id === stepId ? { ...s, ...patch } : s)),
+        }
+      }),
+    }
+    emit()
+  },
+
   removeProcess(id: string) {
     state = {
       ...state,
@@ -145,6 +169,14 @@ export const actions = {
     emit()
   },
 
+  updateConnection(id: string, patch: Partial<Connection>) {
+    state = {
+      ...state,
+      connections: state.connections.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }
+    emit()
+  },
+
   selectProcess(id: string | null) {
     state = { ...state, selectedProcessId: id, showProcessDetail: id !== null }
     emit()
@@ -162,6 +194,11 @@ export const actions = {
 
   toggleCommandPalette(show?: boolean) {
     state = { ...state, showCommandPalette: show ?? !state.showCommandPalette }
+    emit()
+  },
+
+  openConnectionMapping(id: string | null) {
+    state = { ...state, showConnectionMappingId: id }
     emit()
   },
 
