@@ -130,8 +130,8 @@ export default function SettingsPage() {
           <div className="mt-4 grid grid-cols-3 gap-3">
             {[
               { id: 'free', priceId: null, name: "Free", price: "$0", features: ["5 processes", "2 sources/process", "3 BI charts", "30 day retention"] },
-              { id: 'pro', priceId: 'price_test_pro', name: "Pro", price: "$19/mo", features: ["20 processes", "10 sources/process", "Unlimited charts", "1 year retention"] },
-              { id: 'business', priceId: 'price_test_biz', name: "Business", price: "$49/mo", features: ["Unlimited processes", "Unlimited sources", "Unlimited charts", "Unlimited retention"] },
+              { id: 'pro', priceId: 'price_1U5WbvBwme82hGiKLqpZBcxw', name: "Pro", price: "$19/mo", features: ["20 processes", "10 sources/process", "Unlimited charts", "1 year retention"] },
+              { id: 'business', priceId: 'price_1U5WbwBwme82hGiKmjln0H8T', name: "Business", price: "$49/mo", features: ["Unlimited processes", "Unlimited sources", "Unlimited charts", "Unlimited retention"] },
             ].map((plan) => (
               <div
                 key={plan.name}
