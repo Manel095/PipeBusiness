@@ -14,13 +14,13 @@ export function SiteNav() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border bg-white">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <a href="#top" className="flex items-center gap-2 font-bold tracking-tight">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-brand-foreground">
+        <a href="#top" className="flex items-center gap-2 font-bold tracking-tight text-foreground">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand text-foreground">
             <Workflow className="h-5 w-5" strokeWidth={2.5} />
           </span>
-          <span className="text-lg">PipeBusiness</span>
+          <span className="text-xl font-serif">PipeBusiness</span>
         </a>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -28,23 +28,24 @@ export function SiteNav() {
             <a
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="group relative text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
             >
               {l.label}
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-brand transition-all duration-100 ease-out group-hover:w-full"></span>
             </a>
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-4 md:flex">
           <a
             href="/dashboard"
-            className="text-sm font-semibold text-foreground transition-colors hover:text-brand"
+            className="text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
           >
             Log in
           </a>
           <a
             href="/dashboard"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-transform hover:scale-[1.03]"
+            className="rounded-[20px] bg-brand px-5 py-2 text-sm font-semibold text-foreground transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-95 active:scale-95"
           >
             Start free
           </a>
@@ -61,7 +62,7 @@ export function SiteNav() {
       </nav>
 
       {open && (
-        <div className="border-t border-border/60 px-5 py-4 md:hidden">
+        <div className="border-t border-border px-5 py-4 md:hidden bg-white">
           <div className="flex flex-col gap-4">
             {links.map((l) => (
               <a
@@ -73,13 +74,22 @@ export function SiteNav() {
                 {l.label}
               </a>
             ))}
-            <a
-              href="/dashboard"
-              onClick={() => setOpen(false)}
-              className="mt-2 rounded-full bg-brand px-5 py-3 text-center text-sm font-semibold text-brand-foreground"
-            >
-              Start free
-            </a>
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+              <a
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="text-center text-base font-medium text-foreground"
+              >
+                Log in
+              </a>
+              <a
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="rounded-[20px] bg-brand px-5 py-3 text-center text-base font-semibold text-foreground"
+              >
+                Start free
+              </a>
+            </div>
           </div>
         </div>
       )}

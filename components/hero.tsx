@@ -1,256 +1,189 @@
 "use client"
 
-import { useRef } from "react"
-import { motion, useScroll, useTransform } from "framer-motion"
-import { ArrowRight, Database, Webhook, Activity, Zap, TrendingUp, CheckCircle2 } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 
 export function Hero() {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [cycle, setCycle] = useState(0)
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  })
-
-  // Phase 0: Node 1 fades in
-  const node1Opacity = useTransform(scrollYProgress, [0, 0.15], [0, 1])
-  const node1Y = useTransform(scrollYProgress, [0, 0.15], [50, 0])
-
-  // Phase 0.5: Webhook modal pops up briefly
-  const webhookOpacity = useTransform(scrollYProgress, [0.15, 0.2, 0.3, 0.35], [0, 1, 1, 0])
-  const webhookScale = useTransform(scrollYProgress, [0.15, 0.2, 0.3, 0.35], [0.8, 1, 1, 0.8])
-
-  // Phase 1: Node 2 fades in
-  const node2Opacity = useTransform(scrollYProgress, [0.35, 0.45], [0, 1])
-  const node2X = useTransform(scrollYProgress, [0.35, 0.45], [50, 0])
-
-  // Phase 1.5: Connection line draws and Data mapping modal appears
-  const lineWidth = useTransform(scrollYProgress, [0.45, 0.55], ["0%", "100%"])
-  const mappingOpacity = useTransform(scrollYProgress, [0.55, 0.6, 0.7, 0.75], [0, 1, 1, 0])
-  const mappingScale = useTransform(scrollYProgress, [0.55, 0.6, 0.7, 0.75], [0.8, 1, 1, 0.8])
-
-  // Phase 2: Data starts flowing
-  const flowOpacity = useTransform(scrollYProgress, [0.75, 0.8], [0, 1])
-
-  // Phase 3: BI Dashboard drops in
-  const biOpacity = useTransform(scrollYProgress, [0.85, 0.95], [0, 1])
-  const biY = useTransform(scrollYProgress, [0.85, 0.95], [50, 0])
-
-  // Text fading out as animation starts
-  const introOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0])
-  const introY = useTransform(scrollYProgress, [0, 0.1], [0, -50])
+  // Counter and pulsing effect to simulate data flow
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCycle((c) => c + 1)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <section id="top" className="w-full relative bg-background">
-      {/* 1. Static Intro Section - Takes up full viewport initially */}
-      <div className="relative mx-auto max-w-6xl px-5 pt-32 pb-20 md:pt-48 md:pb-32 flex flex-col items-center text-center z-10 bg-background">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-muted-foreground shadow-sm">
-          <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
-          The Modern Operating System for Business
-        </span>
+    <section id="top" className="relative w-full overflow-hidden bg-gradient-to-r from-[#F8E9C3] via-[#FFDAB9] to-[#FDFDFD] pt-24 pb-16 md:pt-32 md:pb-20">
+      {/* Ambient drifting background layer */}
+      <motion.div 
+        className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_50%_50%,rgba(252,221,104,0.1)_0%,transparent_50%)]"
+        animate={{
+          x: ["-5%", "5%", "-5%"],
+          y: ["-5%", "5%", "-5%"],
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      />
 
-        <h1 className="mt-8 text-balance text-5xl font-extrabold leading-[1.1] tracking-tight text-foreground md:text-7xl">
+      <div className="relative z-10 mx-auto max-w-[1200px] px-5 flex flex-col items-center text-center">
+        {/* Headings */}
+        <h1 className="max-w-[700px] font-serif text-[42px] font-bold leading-[1.1] text-foreground md:text-[52px]">
           Advanced Visual Workflow & Data Mapping for Operations
         </h1>
-
-        <p className="mx-auto mt-8 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground md:text-xl">
+        <p className="mt-6 max-w-[550px] text-base leading-relaxed text-foreground/80 md:text-lg">
           Go beyond static dashboards. Map corporate processes, track entity lifecycles, and connect department data in an interactive, automated canvas.
         </p>
 
+        {/* CTAs */}
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
+          <a
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 text-base font-bold text-white transition-all hover:bg-[#D4006D] hover:shadow-lg hover:-translate-y-0.5"
+            className="flex items-center gap-2 rounded-[24px] bg-brand px-8 py-3.5 text-base font-bold text-foreground transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-95 hover:shadow-[0_8px_24px_rgba(47,6,47,0.12)] active:scale-95"
           >
-            Start Mapping for Free
-            <ArrowRight className="h-5 w-5" />
-          </Link>
+            Start mapping
+          </a>
           <a
             href="#features"
-            className="inline-flex items-center gap-2 rounded-full bg-surface border border-border px-8 py-4 text-base font-semibold text-foreground transition-colors hover:bg-muted"
+            className="flex items-center gap-2 rounded-[24px] border-2 border-foreground bg-transparent px-8 py-3.5 text-base font-bold text-foreground transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-95 hover:bg-foreground/5 active:scale-95"
           >
-            Explore Features
+            See how it works
           </a>
         </div>
-      </div>
 
-      {/* 2. Scrollytelling Interactive Section */}
-      <div ref={containerRef} className="relative h-[400vh] w-full">
-        {/* Sticky container that holds the canvas elements in the center of the screen */}
-        <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden bg-background">
+        {/* Directional cue */}
+        <p className="mt-8 text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+          Explore the canvas below
+        </p>
+
+        {/* Realistic Dashboard Node Graph Component */}
+        <div className="relative mt-8 w-full max-w-[1000px] rounded-[16px] border border-border bg-[#FDFDFD] shadow-[0_12px_40px_rgba(47,6,47,0.08)] overflow-hidden">
+          {/* Dot Grid Background */}
+          <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(#A1828E 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
           
-          {/* Background Grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:24px_24px] opacity-30 pointer-events-none" />
-
-          {/* Intro Text fading out to reveal canvas (helps transition) */}
-          <motion.div 
-            style={{ opacity: introOpacity, y: introY }}
-            className="absolute top-1/4 text-center px-4 w-full text-muted-foreground font-medium text-xl md:text-2xl"
-          >
-            Scroll down to see the magic happen ↓
-          </motion.div>
-
-          <div className="relative w-full max-w-5xl h-[500px] flex items-center justify-center mt-20">
+          <div className="relative flex flex-col md:flex-row h-auto md:h-[480px] w-full items-center justify-center gap-8 md:gap-16 px-4 md:px-12 py-12 md:py-0">
             
-            {/* Connection Line */}
-            <div className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-64 md:w-96 h-1.5 flex items-center justify-start z-0 overflow-hidden rounded-full bg-surface border border-border">
-              <motion.div 
-                style={{ width: lineWidth }}
-                className="h-full bg-gradient-to-r from-brand via-purple-500 to-blue-500 rounded-full"
+            {/* SVG Connector Paths */}
+            <svg className="absolute inset-0 h-full w-full pointer-events-none hidden md:block" preserveAspectRatio="none">
+              {/* Marketing to Sales */}
+              <path
+                d="M 330 240 C 420 240, 420 240, 500 240"
+                fill="none"
+                stroke="var(--border)"
+                strokeWidth="2"
               />
-              
-              {/* Animated Data Packets (Glowing Dots) */}
-              <motion.div 
-                style={{ opacity: flowOpacity }}
-                className="absolute inset-0 flex items-center overflow-hidden"
-              >
-                {[...Array(4)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ x: ["-100%", "500%"] }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                      delay: i * 0.5
-                    }}
-                    className="w-16 h-1.5 rounded-full bg-white/80 shadow-[0_0_12px_3px_#FF0083] absolute left-0"
-                  />
-                ))}
-              </motion.div>
-            </div>
+              <circle cx="500" cy="240" r="4" fill="var(--border)" />
+              {/* Sales to Operations */}
+              <path
+                d="M 680 240 C 760 240, 760 240, 840 240"
+                fill="none"
+                stroke="var(--border)"
+                strokeWidth="2"
+              />
+              <circle cx="840" cy="240" r="4" fill="var(--border)" />
+            </svg>
 
-            {/* Nodes Container */}
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-3xl gap-20 md:gap-0 px-4">
-              
-              {/* Node 1: Marketing */}
-              <motion.div 
-                style={{ opacity: node1Opacity, y: node1Y }}
-                className="relative w-64 rounded-2xl border border-border bg-background p-5 shadow-2xl shadow-brand/10 backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center text-sm font-extrabold uppercase">
-                    M
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm">Marketing</h3>
-                    <p className="text-xs text-muted-foreground">Lead Engine</p>
-                  </div>
-                </div>
-                
-                {/* Simulated Data Row */}
-                <motion.div 
-                  style={{ opacity: flowOpacity }}
-                  className="space-y-2 border-t border-border pt-4"
-                >
-                  <div className="text-xs flex justify-between">
-                    <span className="text-muted-foreground">lead_id</span>
-                    <span className="font-mono">usr_9821</span>
-                  </div>
-                  <div className="text-xs flex justify-between">
-                    <span className="text-muted-foreground">source</span>
-                    <span className="font-mono text-brand font-semibold">Google Ads</span>
-                  </div>
-                </motion.div>
+            {/* Traveling Data Packet 1 */}
+            <motion.div
+              className="absolute z-20 hidden h-3 w-3 rounded-full bg-[#FF0083] shadow-[0_0_10px_#FF0083] md:block"
+              animate={{ left: ["330px", "500px", "500px"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+              style={{ top: "240px", translateY: "-50%", translateX: "-50%" }}
+            />
 
-                {/* Webhook Modal Pop-up */}
-                <motion.div 
-                  style={{ opacity: webhookOpacity, scale: webhookScale }}
-                  className="absolute -top-16 -right-5 md:-right-16 bg-surface border border-border rounded-xl p-3 shadow-xl z-20 w-52"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Webhook className="w-4 h-4 text-purple-500" />
-                    <span className="text-[11px] font-bold tracking-tight">Webhook Connected</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground font-mono truncate">
-                    Listening on /api/ingest...
-                  </div>
-                </motion.div>
-              </motion.div>
+            {/* Traveling Data Packet 2 */}
+            <motion.div
+              className="absolute z-20 hidden h-3 w-3 rounded-full bg-[#0052CC] shadow-[0_0_10px_#0052CC] md:block"
+              animate={{ left: ["680px", "680px", "840px"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+              style={{ top: "240px", translateY: "-50%", translateX: "-50%" }}
+            />
 
-              {/* Center Mapping Modal Pop-up */}
-              <motion.div
-                style={{ opacity: mappingOpacity, scale: mappingScale }}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[120px] md:-translate-y-[140px] bg-surface border border-border rounded-xl p-4 shadow-2xl z-30 w-56 flex flex-col items-center"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Database className="w-4 h-4 text-brand" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Schema Mapping</span>
-                </div>
-                <div className="flex items-center gap-3 text-[11px] font-mono bg-background border border-border px-3 py-2 rounded-lg w-full justify-center">
-                  <span className="text-muted-foreground">lead_id</span>
-                  <ArrowRight className="w-3 h-3 text-brand" />
-                  <span className="text-foreground font-bold">client_id</span>
-                </div>
-              </motion.div>
-
-              {/* Node 2: Sales */}
-              <motion.div 
-                style={{ opacity: node2Opacity, x: node2X }}
-                className="relative w-64 rounded-2xl border border-border bg-background p-5 shadow-2xl shadow-blue-500/10 backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-extrabold uppercase">
-                    S
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm">Sales</h3>
-                    <p className="text-xs text-muted-foreground">Cash Engine</p>
-                  </div>
-                </div>
-
-                <motion.div 
-                  style={{ opacity: flowOpacity }}
-                  className="space-y-2 border-t border-border pt-4"
-                >
-                  <div className="text-xs flex justify-between">
-                    <span className="text-muted-foreground">client_id</span>
-                    <span className="font-mono">usr_9821</span>
-                  </div>
-                  <div className="text-xs flex justify-between">
-                    <span className="text-muted-foreground">pipeline</span>
-                    <span className="font-mono text-emerald-600 flex items-center gap-1 font-semibold">
-                      <CheckCircle2 className="w-3 h-3"/> Won
-                    </span>
-                  </div>
-                </motion.div>
-              </motion.div>
-
-            </div>
-
-            {/* BI Dashboard Drops In */}
+            {/* Node 1: Marketing */}
             <motion.div 
-              style={{ opacity: biOpacity, y: biY }}
-              className="absolute -bottom-10 md:-bottom-20 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-background border border-border rounded-2xl p-6 shadow-2xl z-40"
+              className="relative z-10 w-[240px] flex flex-col rounded-[14px] border border-border bg-white shadow-sm"
+              animate={{ scale: [1, 1.02, 1] }}
+              transition={{ duration: 0.4, delay: 0, repeat: Infinity, repeatDelay: 3.6 }}
             >
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-brand" />
-                  <h3 className="font-bold text-sm">Live Intelligence</h3>
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-[8px] font-bold text-[14px]" style={{ background: "rgba(255,0,131,0.1)", color: "#FF0083" }}>M</div>
+                  <div>
+                    <h3 className="font-sans text-[14px] font-bold text-foreground leading-tight">Marketing</h3>
+                    <p className="text-[11px] text-muted-foreground font-medium">Lead Engine</p>
+                  </div>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> Real-time
-                </span>
               </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-surface rounded-xl border border-border p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Leads (In)</div>
-                  <div className="text-2xl font-extrabold">2,401</div>
+              <div className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Leads Captured</span>
+                  <span className="font-mono font-bold text-foreground">{75 + cycle}</span>
                 </div>
-                <div className="bg-surface rounded-xl border border-border p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Deals (Out)</div>
-                  <div className="text-2xl font-extrabold">842</div>
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Cost per Lead</span>
+                  <span className="font-mono font-bold text-foreground">$15.4</span>
                 </div>
-                <div className="bg-surface rounded-xl border border-border p-4 md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Conversion Rate</div>
-                  <div className="text-2xl font-extrabold text-emerald-600 flex items-center gap-2">
-                    35.1% <TrendingUp className="w-5 h-5" />
+              </div>
+            </motion.div>
+
+            {/* Node 2: Sales */}
+            <motion.div 
+              className="relative z-10 w-[240px] flex flex-col rounded-[14px] border border-border bg-white shadow-sm"
+              animate={{ scale: [1, 1.02, 1] }}
+              transition={{ duration: 0.4, delay: 1, repeat: Infinity, repeatDelay: 3.6 }}
+            >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200 shadow-sm flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                Lead Handoff
+              </div>
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-[8px] font-bold text-[14px]" style={{ background: "rgba(0,82,204,0.1)", color: "#0052CC" }}>S</div>
+                  <div>
+                    <h3 className="font-sans text-[14px] font-bold text-foreground leading-tight">Sales</h3>
+                    <p className="text-[11px] text-muted-foreground font-medium">Cash Engine</p>
                   </div>
-                  <div className="mt-2 w-full h-1 bg-border rounded-full overflow-hidden">
-                     <div className="h-full bg-emerald-500 w-[35.1%] rounded-full" />
+                </div>
+              </div>
+              <div className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Deals Won</span>
+                  <span className="font-mono font-bold text-foreground">{2 + Math.floor(cycle / 2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Revenue</span>
+                  <span className="font-mono font-bold text-foreground">${21014 + (Math.floor(cycle / 2) * 1250)}</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Node 3: Operations */}
+            <motion.div 
+              className="relative z-10 w-[240px] flex flex-col rounded-[14px] border border-border bg-white shadow-sm"
+              animate={{ scale: [1, 1.02, 1] }}
+              transition={{ duration: 0.4, delay: 2, repeat: Infinity, repeatDelay: 3.6 }}
+            >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200 shadow-sm flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                Project Pipeline
+              </div>
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-[8px] font-bold text-[14px]" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>O</div>
+                  <div>
+                    <h3 className="font-sans text-[14px] font-bold text-foreground leading-tight">Operations</h3>
+                    <p className="text-[11px] text-muted-foreground font-medium">Project Engine</p>
                   </div>
+                </div>
+              </div>
+              <div className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Active Projects</span>
+                  <span className="font-mono font-bold text-foreground">{15 + Math.floor(cycle / 2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-muted-foreground font-medium">Efficiency</span>
+                  <span className="font-mono font-bold text-foreground">83.8%</span>
                 </div>
               </div>
             </motion.div>

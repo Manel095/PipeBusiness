@@ -107,7 +107,7 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
         </div>
 
         {/* KPI Summary (from config) — show top 2 KPIs */}
-        {process.config?.kpis && process.config.kpis.length > 0 && process.data.length > 0 && (
+        {process.config?.kpis && process.config.kpis.length > 0 && (process.data?.length ?? 0) > 0 && (
           <div className="process-node-body">
             {process.config.kpis.slice(0, 2).map((kpi) => {
               const lastRow = process.data[process.data.length - 1]

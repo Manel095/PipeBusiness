@@ -18,7 +18,7 @@ export function ConnectionModal({ connectionId }: { connectionId: string }) {
   // Available fields from source engine's schema
   const sourceFields = fromProc.config?.inputSchema?.map(f => f.key) ?? []
   // Also include data keys
-  const dataKeys = fromProc.data.length > 0 ? Object.keys(fromProc.data[0]).filter(k => k !== "date") : []
+  const dataKeys = (fromProc.data?.length ?? 0) > 0 ? Object.keys(fromProc.data[0]).filter(k => k !== "date") : []
   const allFields = [...new Set([...sourceFields, ...dataKeys])]
 
   const toggleField = (field: string) => {

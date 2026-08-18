@@ -26,10 +26,10 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
 
   return (
-    <section id="faq" className="py-24 bg-surface border-t border-border">
+    <section id="faq" className="py-16 md:py-20 bg-background">
       <div className="mx-auto max-w-3xl px-5">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
+          <h2 className="text-[32px] md:text-[42px] font-serif font-bold tracking-tight text-foreground leading-[1.1]">
             Frequently Asked Questions
           </h2>
         </div>
@@ -38,19 +38,21 @@ export function FaqSection() {
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index
             return (
-              <div key={index} className="border border-border bg-background rounded-2xl overflow-hidden transition-all duration-200 shadow-sm hover:border-brand/30">
+              <div key={index} className={`border bg-white rounded-xl overflow-hidden transition-all duration-300 ${isOpen ? "border-brand shadow-sm" : "border-border shadow-none"}`}>
                 <button
                   type="button"
                   className="w-full text-left px-6 py-5 flex items-center justify-between focus:outline-none"
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                 >
-                  <span className="font-semibold text-lg">{faq.question}</span>
-                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180 text-brand" : ""}`} />
+                  <span className="font-bold text-base text-foreground pr-4">{faq.question}</span>
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${isOpen ? "bg-brand text-foreground" : "bg-muted text-foreground"}`}>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} strokeWidth={3} />
+                  </div>
                 </button>
                 <div 
-                  className={`px-6 overflow-hidden transition-all duration-200 ease-in-out ${isOpen ? "max-h-48 pb-5 opacity-100" : "max-h-0 opacity-0"}`}
+                  className={`px-6 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? "max-h-48 pb-6 opacity-100" : "max-h-0 opacity-0"}`}
                 >
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-foreground/80 leading-relaxed text-[15px]">
                     {faq.answer}
                   </p>
                 </div>

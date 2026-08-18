@@ -1,95 +1,122 @@
 "use client"
 
-import { useState } from "react"
-import { Search, CornerDownLeft } from "lucide-react"
-import { useCompanySim } from "@/hooks/use-company-sim"
+import { useEffect, useState, useRef } from "react"
+import { motion, useInView } from "framer-motion"
+import { Check } from "lucide-react"
+
+const CLI_COMMANDS = [
+  {
+    cmd: "/create Marketing webhook https://api.ads.com/hook",
+    desc: "Create a Lead Engine with a webhook",
+  },
+  {
+    cmd: "/create Sales api https://crm.io/deals",
+    desc: "Create a Cash Engine with CRM API",
+  },
+  {
+    cmd: "/connect Marketing Sales \"Lead Handoff\"",
+    desc: "Pipe leads from Marketing to Sales",
+  },
+  {
+    cmd: "/report Sales monthly",
+    desc: "Generate a monthly snapshot",
+  },
+]
 
 export function CommandDemo() {
-  const sim = useCompanySim()
-  const [active, setActive] = useState(0)
-
-  const commands = [
-    {
-      cmd: "/benefits",
-      label: "Net profit produced by the engine",
-      value: `$${sim.benefits}k`,
-      delta: `${sim.flow.operations}/tick from operations`,
-    },
-    {
-      cmd: "/leads",
-      label: "Leads waiting in the pipeline",
-      value: sim.leads.toLocaleString(),
-      delta: `+${sim.flow.marketing}/tick from marketing`,
-    },
-    {
-      cmd: "/clients",
-      label: "Active clients converted by sales",
-      value: sim.clients.toLocaleString(),
-      delta: `${sim.projects} projects running`,
-    },
-    {
-      cmd: "/resources",
-      label: "Resources left in the tank",
-      value: sim.resources.toLocaleString(),
-      delta: `- $${sim.maintenanceCost}k maintenance`,
-    },
-  ]
-
-  const current = commands[active]
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
 
   return (
-    <section id="how-it-works" className="py-20 md:py-28">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-balance text-4xl font-extrabold tracking-tight md:text-5xl">
-            Ask for any number. Get it in a keystroke.
+    <section className="w-full bg-[#2F062F] py-16 md:py-20">
+      <div className="mx-auto max-w-[1200px] px-5 grid md:grid-cols-2 gap-12 md:gap-20 items-center">
+        
+        {/* Left Side: Copy */}
+        <div>
+          <span className="text-[12px] font-bold uppercase tracking-wider text-brand">Command-Driven</span>
+          <h2 className="mt-4 text-[32px] md:text-[42px] font-serif font-bold tracking-tight text-white leading-[1.1]">
+            Build your business OS from the command bar
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Hit the command bar, type a slash command, and PipeBusiness pulls the answer
-            straight from your process map. Try one:
+          <p className="mt-6 text-[16px] leading-relaxed text-[#F3EEF0]/80">
+            No more clicking through menus. Press <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-[13px]">⌘K</code> and type commands to create engines, wire connectors, add webhooks, and generate intelligence reports — all in seconds.
           </p>
+
+          <div className="mt-10">
+            <h4 className="text-sm font-bold text-white mb-3">5 core commands</h4>
+            <div className="flex flex-wrap gap-2 font-mono text-[13px] text-[#A1828E]">
+              <span className="text-brand">/create</span> · <span className="text-brand">/connect</span> · <span className="text-brand">/update</span> · <span className="text-brand">/report</span> · <span className="text-brand">/status</span>
+            </div>
+          </div>
         </div>
 
-        <div className="mx-auto mt-12 max-w-2xl">
-          {/* chips */}
-          <div className="flex flex-wrap justify-center gap-2">
-            {commands.map((c, i) => (
-              <button
-                key={c.cmd}
-                type="button"
-                onClick={() => setActive(i)}
-                className={`rounded-full border px-4 py-2 font-mono text-sm transition-colors ${
-                  i === active
-                    ? "border-brand bg-brand text-brand-foreground"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
+        {/* Right Side: Animated Terminal */}
+        <div ref={ref} className="rounded-xl border border-white/10 bg-black/40 p-6 md:p-8 shadow-2xl">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+              <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+              <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+            </div>
+            <span className="ml-4 text-[12px] font-mono text-white/40">PipeBusiness CLI</span>
+          </div>
+
+          <div className="space-y-6 font-mono text-[13px]">
+            {CLI_COMMANDS.map((item, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.4, delay: index * 0.8 }}
+                className="space-y-2"
               >
-                {c.cmd}
-              </button>
+                {/* Typed Command */}
+                <div className="flex items-center text-white">
+                  <span className="text-brand mr-2">❯</span>
+                  {/* Simulate typing effect by revealing width or just fading in for now */}
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={isInView ? { opacity: 1 } : {}}
+                    transition={{ duration: 0.2, delay: (index * 0.8) + 0.2 }}
+                  >
+                    {item.cmd}
+                  </motion.span>
+                </div>
+                
+                {/* Result / Checkmark */}
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={isInView ? { opacity: 1, scale: 1 } : {}}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 400, 
+                    damping: 25,
+                    delay: (index * 0.8) + 0.6
+                  }}
+                  className="flex items-center gap-2 text-[#A1828E] pl-4"
+                >
+                  <Check className="w-4 h-4 text-[#27C93F]" strokeWidth={3} />
+                  <span>{item.desc}</span>
+                </motion.div>
+              </motion.div>
             ))}
-          </div>
-
-          {/* terminal */}
-          <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-surface">
-            <div className="flex items-center gap-3 border-b border-border bg-background px-5 py-4">
-              <Search className="h-5 w-5 text-muted-foreground" />
-              <span className="font-mono text-base text-foreground">{current.cmd}</span>
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <CornerDownLeft className="h-4 w-4" />
-                Enter
-              </span>
-            </div>
-            <div className="px-6 py-8 text-center">
-              <p className="text-sm font-medium text-muted-foreground">{current.label}</p>
-              <p className="mt-2 text-5xl font-extrabold tracking-tight text-foreground md:text-6xl">
-                {current.value}
-              </p>
-              <p className="mt-3 inline-block rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
-                {current.delta}
-              </p>
-            </div>
+            
+            {/* Blinking Cursor at the end */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ delay: (CLI_COMMANDS.length * 0.8) + 0.5 }}
+              className="flex items-center text-white pt-2"
+            >
+              <span className="text-brand mr-2">❯</span>
+              <motion.div 
+                animate={{ opacity: [1, 0] }} 
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                className="w-2 h-4 bg-white/60"
+              />
+            </motion.div>
           </div>
         </div>
+
       </div>
     </section>
   )

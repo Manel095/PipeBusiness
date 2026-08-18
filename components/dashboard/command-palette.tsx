@@ -24,6 +24,8 @@ export function CommandPalette() {
     period?: string
   } | null>(null)
 
+  const inputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => { inputRef.current?.focus() }, [])
 
   const isCommand = query.startsWith("/")

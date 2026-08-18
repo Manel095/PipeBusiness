@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Workspace", href: "/dashboard", icon: LayoutDashboard },
   { label: "Connections", href: "/dashboard/connections", icon: Link2 },
   { label: "Intelligence", href: "/dashboard/intelligence", icon: BarChart3 },
+  { label: "Insights", href: "/dashboard/insights", icon: Search }, // Using Search or we can import another icon
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
@@ -135,6 +136,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {pathname === "/dashboard" ? "Workspace"
                 : pathname === "/dashboard/connections" ? "Connections"
                 : pathname === "/dashboard/intelligence" ? "Intelligence"
+                : pathname === "/dashboard/insights" ? "Insights"
                 : "Settings"}
             </span>
           </div>

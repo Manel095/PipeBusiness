@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { useWorkspace, actions, type Report } from "@/lib/store"
-import { Plus, FileText, Download, Trash2, Clock, Save, Copy, Eye, Edit3, Calendar } from "lucide-react"
+import { Plus, FileText, Download, Trash2, Clock, Save, Copy, Eye, Edit3, Calendar, Database } from "lucide-react"
 import { MarkdownRenderer } from "@/components/dashboard/markdown-renderer"
 
 export default function IntelligencePage() {
@@ -12,6 +12,7 @@ export default function IntelligencePage() {
   const [editTitle, setEditTitle] = useState("")
   const [isPreview, setIsPreview] = useState(true)
   const [showScheduleDropdown, setShowScheduleDropdown] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const reports = workspace.reports ?? []
   const selectedReport = reports.find(r => r.id === selectedReportId)
@@ -112,6 +113,37 @@ export default function IntelligencePage() {
     URL.revokeObjectURL(url)
   }
 
+  // --- Data Library Insert Helpers ---
+  const insertText = (text: string) => {
+    if (!textareaRef.current) return
+    
+    const textarea = textareaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    
+    // Insert text at cursor
+    const newContent = editContent.substring(0, start) + "\n" + text + "\n" + editContent.substring(end)
+    
+    setEditContent(newContent)
+    if (selectedReportId) {
+      actions.updateReport(selectedReportId, { content: newContent })
+    }
+
+    // Restore focus
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + text.length + 2, start + text.length + 2)
+    }, 10)
+  }
+
+  const insertMetricBlock = (engine: string, field: string, title: string) => {
+    insertText(`\`\`\`metric\n{\n  "engine": "${engine}",\n  "field": "${field}",\n  "title": "${title}",\n  "period": "month"\n}\n\`\`\``)
+  }
+
+  const insertChartBlock = (engine: string, yAxis: string, title: string) => {
+    insertText(`\`\`\`chart\n{\n  "engine": "${engine}",\n  "type": "Line",\n  "title": "${title} Trend",\n  "xAxis": "date",\n  "yAxis": "${yAxis}"\n}\n\`\`\``)
+  }
+
   return (
     <div className="h-full flex">
       {/* Sidebar — Reports list */}
@@ -160,7 +192,7 @@ export default function IntelligencePage() {
       </div>
 
       {/* Main — Editor */}
-      <div className="flex-1 flex flex-col h-full bg-background">
+      <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
         {selectedReport ? (
           <>
             {/* Editor Header */}
@@ -216,25 +248,85 @@ export default function IntelligencePage() {
               </div>
             </div>
 
-            {/* Editor Body */}
-            <div className="flex-1 overflow-y-auto p-6 bg-surface/30">
-              <div className="max-w-4xl mx-auto h-full">
-                {isPreview ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none w-full bg-background border border-border rounded-xl p-8 min-h-[500px] shadow-sm">
-                    <MarkdownRenderer content={editContent} />
-                  </div>
-                ) : (
-                  <textarea
-                    value={editContent}
-                    onChange={e => {
-                      setEditContent(e.target.value)
-                      actions.updateReport(selectedReportId!, { content: e.target.value })
-                    }}
-                    className="w-full h-full min-h-[500px] bg-background border border-border rounded-xl p-6 outline-none text-sm font-mono leading-relaxed resize-none shadow-sm focus:border-brand/50 transition-colors"
-                    placeholder="Write your report in Markdown..."
-                  />
-                )}
+            {/* Editor Body with Data Library */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Markdown Editor / Preview */}
+              <div className="flex-1 overflow-y-auto p-6 bg-surface/30">
+                <div className="max-w-4xl mx-auto h-full">
+                  {isPreview ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none w-full bg-background border border-border rounded-xl p-8 min-h-[500px] shadow-sm">
+                      <MarkdownRenderer content={editContent} />
+                    </div>
+                  ) : (
+                    <textarea
+                      ref={textareaRef}
+                      value={editContent}
+                      onChange={e => {
+                        setEditContent(e.target.value)
+                        actions.updateReport(selectedReportId!, { content: e.target.value })
+                      }}
+                      className="w-full h-full min-h-[500px] bg-background border border-border rounded-xl p-6 outline-none text-sm font-mono leading-relaxed resize-none shadow-sm focus:border-brand/50 transition-colors"
+                      placeholder="Write your report in Markdown..."
+                    />
+                  )}
+                </div>
               </div>
+
+              {/* Data Library Sidebar (only visible in Edit mode) */}
+              {!isPreview && (
+                <div className="w-72 border-l border-border bg-background flex flex-col h-full overflow-hidden">
+                  <div className="p-4 border-b border-border bg-surface/30">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <Database className="w-4 h-4" /> Data Library
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">Click blocks to insert into your report.</p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {workspace.processes.map(proc => (
+                      <div key={proc.id} className="border border-border rounded-xl p-3 bg-surface">
+                        <h4 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: proc.color }}>
+                          <span className="w-4 h-4 rounded text-[8px] flex items-center justify-center font-black" style={{ background: `${proc.color}20` }}>{proc.name.charAt(0)}</span>
+                          {proc.name}
+                        </h4>
+                        
+                        {(proc.config?.kpis?.length ?? 0) > 0 && (
+                          <div className="mb-4">
+                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Metrics</p>
+                            <div className="flex flex-col gap-1">
+                              {proc.config.kpis.map(kpi => (
+                                <button
+                                  key={kpi.id}
+                                  onClick={() => insertMetricBlock(proc.name, kpi.field, kpi.name)}
+                                  className="text-left text-[11px] font-medium px-2 py-1.5 hover:bg-background border border-transparent hover:border-border rounded-lg flex items-center gap-2 transition-colors"
+                                >
+                                  <Plus className="w-3 h-3 text-muted-foreground" /> {kpi.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(proc.config?.inputSchema?.length ?? 0) > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Charts</p>
+                            <div className="flex flex-col gap-1">
+                              {proc.config.inputSchema.filter(f => f.type === "number" || f.type === "currency").map(f => (
+                                <button
+                                  key={f.key}
+                                  onClick={() => insertChartBlock(proc.name, f.key, f.label)}
+                                  className="text-left text-[11px] font-medium px-2 py-1.5 hover:bg-background border border-transparent hover:border-border rounded-lg flex items-center gap-2 transition-colors"
+                                >
+                                  <Plus className="w-3 h-3 text-muted-foreground" /> {f.label} Trend
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (

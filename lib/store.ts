@@ -85,11 +85,34 @@ export type Report = {
   schedule?: "daily" | "weekly" | "monthly" | null
 }
 
+/* ─── Custom Dashboards (Insights) ─── */
+export type WidgetConfig = {
+  id: string
+  type: "chart" | "metric"
+  engine: string
+  field?: string
+  chartType?: "Line" | "Bar" | "Area"
+  xAxis?: string
+  yAxis?: string
+  title?: string
+  period?: string
+  layout?: { x: number; y: number; w: number; h: number }
+}
+
+export type InsightDashboard = {
+  id: string
+  title: string
+  widgets: WidgetConfig[]
+  createdAt: number
+  updatedAt: number
+}
+
 /* ─── Workspace State ─── */
 export type WorkspaceState = {
   processes: ProcessNode[]
   connectors: Connector[]
   reports: Report[]
+  insights: InsightDashboard[]
   selectedProcessId: string | null
   selectedConnectorId: string | null
   showProcessDetail: boolean
@@ -105,6 +128,7 @@ const INITIAL: WorkspaceState = {
   processes: [],
   connectors: [],
   reports: [],
+  insights: [],
   selectedProcessId: null,
   selectedConnectorId: null,
   showProcessDetail: false,
@@ -116,8 +140,36 @@ const INITIAL: WorkspaceState = {
 }
 
 /* ─── store singleton ─── */
+import { createClient } from "@/lib/supabase/client"
 let state: WorkspaceState = INITIAL
 const listeners = new Set<() => void>()
+const supabase = typeof window !== 'undefined' ? createClient() : null
+
+async function syncInsightsToSupabase(insights: InsightDashboard[]) {
+  if (!supabase) return
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+    
+    // Get user's first workspace
+    const { data: workspaces } = await supabase.from('workspaces').select('id').eq('user_id', session.user.id).limit(1)
+    if (!workspaces || workspaces.length === 0) return
+    const workspaceId = workspaces[0].id
+
+    // Upsert insights
+    for (const insight of insights) {
+      await supabase.from('custom_dashboards').upsert({
+        id: insight.id.replace('insight-', ''), // Ensure UUID if needed, or keep string
+        workspace_id: workspaceId,
+        title: insight.title,
+        widgets: insight.widgets,
+        updated_at: new Date(insight.updatedAt).toISOString()
+      }, { onConflict: 'id' }).catch(e => console.error(e))
+    }
+  } catch (e) {
+    console.error("Supabase sync error:", e)
+  }
+}
 
 function emit() {
   listeners.forEach((l) => l())
@@ -126,8 +178,14 @@ function emit() {
       processes: state.processes,
       connectors: state.connectors,
       reports: state.reports,
+      insights: state.insights,
     }
     localStorage.setItem("pb-workspace", JSON.stringify(serializable))
+    
+    // Background sync
+    if (state.insights.length > 0) {
+      syncInsightsToSupabase(state.insights)
+    }
   } catch {}
 }
 
@@ -149,6 +207,7 @@ export const actions = {
         processes: stored.processes,
         connectors: (stored as any).connectors ?? (stored as any).connections ?? [],
         reports: (stored as any).reports ?? [],
+        insights: (stored as any).insights ?? [],
       }
     } else if (seed) {
       state = { ...state, processes: seed.processes, connectors: seed.connectors }
@@ -315,6 +374,69 @@ export const actions = {
     state = {
       ...state,
       reports: state.reports.filter((r) => r.id !== id),
+    }
+    emit()
+  },
+
+  /* ─── Insights ─── */
+  addInsight(insight: InsightDashboard) {
+    state = { ...state, insights: [...state.insights, insight] }
+    emit()
+  },
+
+  updateInsight(id: string, patch: Partial<InsightDashboard>) {
+    state = {
+      ...state,
+      insights: state.insights.map((i) => (i.id === id ? { ...i, ...patch } : i)),
+    }
+    emit()
+  },
+
+  removeInsight(id: string) {
+    state = {
+      ...state,
+      insights: state.insights.filter((i) => i.id !== id),
+    }
+    emit()
+  },
+
+  addWidget(insightId: string, widget: WidgetConfig) {
+    state = {
+      ...state,
+      insights: state.insights.map((i) => {
+        if (i.id !== insightId) return i
+        return { ...i, widgets: [...i.widgets, widget], updatedAt: Date.now() }
+      }),
+    }
+    emit()
+  },
+
+  updateWidget(insightId: string, widgetId: string, patch: Partial<WidgetConfig>) {
+    state = {
+      ...state,
+      insights: state.insights.map((i) => {
+        if (i.id !== insightId) return i
+        return {
+          ...i,
+          widgets: i.widgets.map((w) => (w.id === widgetId ? { ...w, ...patch } : w)),
+          updatedAt: Date.now()
+        }
+      }),
+    }
+    emit()
+  },
+
+  removeWidget(insightId: string, widgetId: string) {
+    state = {
+      ...state,
+      insights: state.insights.map((i) => {
+        if (i.id !== insightId) return i
+        return {
+          ...i,
+          widgets: i.widgets.filter((w) => w.id !== widgetId),
+          updatedAt: Date.now()
+        }
+      }),
     }
     emit()
   },
