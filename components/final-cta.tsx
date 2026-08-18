@@ -46,19 +46,22 @@ export function Footer() {
             <div>
               <h4 className="font-bold mb-4 text-foreground text-[15px]">Product</h4>
               <ul className="space-y-3 text-[14px] text-foreground/70">
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#integrations" className="hover:text-foreground transition-colors">Integrations</a></li>
-                <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
-                <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
+                <li><a href="/#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="/use-cases" className="hover:text-foreground transition-colors">Use Cases</a></li>
+                <li><a href="/#integrations" className="hover:text-foreground transition-colors">Integrations</a></li>
+                <li><a href="/#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="/#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-bold mb-4 text-foreground text-[15px]">Use Cases</h4>
               <ul className="space-y-3 text-[14px] text-foreground/70">
-                <li><a href="#" className="hover:text-foreground transition-colors">Marketing Pipelines</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Sales Handover</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Operations Tracking</a></li>
+                <li><a href="/use-cases#ecommerce" className="hover:text-foreground transition-colors">E-Commerce & D2C</a></li>
+                <li><a href="/use-cases#saas" className="hover:text-foreground transition-colors">B2B SaaS & PLG</a></li>
+                <li><a href="/use-cases#agencies" className="hover:text-foreground transition-colors">Service Agencies</a></li>
+                <li><a href="/use-cases#logistics" className="hover:text-foreground transition-colors">Logistics & Supply Chain</a></li>
+                <li><a href="/use-cases#finance" className="hover:text-foreground transition-colors">Finance & Reconciliation</a></li>
               </ul>
             </div>
 

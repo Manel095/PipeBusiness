@@ -4,10 +4,11 @@ import { useState } from "react"
 import { Workflow, Menu, X } from "lucide-react"
 
 const links = [
-  { label: "Features", href: "#features" },
-  { label: "Integrations", href: "#integrations" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Features", href: "/#features" },
+  { label: "Use Cases", href: "/use-cases" },
+  { label: "Integrations", href: "/#integrations" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
 ]
 
 export function SiteNav() {
