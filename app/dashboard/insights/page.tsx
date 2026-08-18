@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useWorkspace, actions, type InsightDashboard, type WidgetConfig } from "@/lib/store"
 import { Plus, Trash2, Database, LayoutDashboard, Settings } from "lucide-react"
-import GridLayout, { WidthProvider, Layout } from "react-grid-layout"
+import GridLayout, { Layout } from "react-grid-layout"
+import { WidthProvider } from "react-grid-layout/legacy"
 import "react-grid-layout/css/styles.css"
 import "react-resizable/css/styles.css"
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer"
@@ -34,7 +35,7 @@ export default function InsightsPage() {
     actions.removeInsight(id)
   }
 
-  const onLayoutChange = (newLayout: Layout[]) => {
+  const onLayoutChange = (newLayout: Layout) => {
     if (!selectedDashboardId || !selectedDashboard) return
     // Optimistic merge
     newLayout.forEach(layoutItem => {
