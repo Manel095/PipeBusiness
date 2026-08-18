@@ -158,13 +158,17 @@ async function syncInsightsToSupabase(insights: InsightDashboard[]) {
 
     // Upsert insights
     for (const insight of insights) {
-      await supabase.from('custom_dashboards').upsert({
+      const { error } = await supabase.from('custom_dashboards').upsert({
         id: insight.id.replace('insight-', ''), // Ensure UUID if needed, or keep string
         workspace_id: workspaceId,
         title: insight.title,
         widgets: insight.widgets,
         updated_at: new Date(insight.updatedAt).toISOString()
-      }, { onConflict: 'id' }).catch(e => console.error(e))
+      }, { onConflict: 'id' })
+      
+      if (error) {
+        console.error("Error upserting dashboard:", error)
+      }
     }
   } catch (e) {
     console.error("Supabase sync error:", e)

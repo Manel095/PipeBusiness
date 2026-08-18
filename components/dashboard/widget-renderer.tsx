@@ -24,18 +24,18 @@ export function WidgetRenderer({ widget }: { widget: WidgetConfig }) {
           <ResponsiveContainer width="100%" height="100%">
             <ChartComp data={process.data}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey={widget.xAxis} stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+              <XAxis dataKey={widget.xAxis || ""} stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => typeof v === 'number' && v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
               <RechartsTooltip 
                 contentStyle={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: "8px", fontSize: "12px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}
                 itemStyle={{ color: "var(--foreground)", fontWeight: 700 }}
               />
               {widget.chartType === "Bar" ? (
-                <Bar dataKey={widget.yAxis} fill="var(--brand)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={widget.yAxis || ""} fill="var(--brand)" radius={[4, 4, 0, 0]} />
               ) : widget.chartType === "Area" ? (
-                <Area type="monotone" dataKey={widget.yAxis} fill="var(--brand)" stroke="var(--brand)" strokeWidth={2} />
+                <Area type="monotone" dataKey={widget.yAxis || ""} fill="var(--brand)" stroke="var(--brand)" strokeWidth={2} />
               ) : (
-                <Line type="monotone" dataKey={widget.yAxis} stroke="var(--brand)" strokeWidth={2} />
+                <Line type="monotone" dataKey={widget.yAxis || ""} stroke="var(--brand)" strokeWidth={2} />
               )}
             </ChartComp>
           </ResponsiveContainer>
