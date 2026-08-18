@@ -32,7 +32,6 @@ export function MarkdownRenderer({ content }: { content: string }) {
               if (lang === "chart") {
                 // Render Chart
                 const ChartComp = config.type === "Line" ? LineChart : config.type === "Area" ? AreaChart : BarChart
-                const DataComp = config.type === "Line" ? Line : config.type === "Area" ? Area : Bar
                 
                 return (
                   <div className="my-6 p-6 rounded-xl border border-border bg-surface h-[340px] w-full">
@@ -46,7 +45,13 @@ export function MarkdownRenderer({ content }: { content: string }) {
                           contentStyle={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: "8px", fontSize: "12px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}
                           itemStyle={{ color: "var(--foreground)", fontWeight: 700 }}
                         />
-                        <DataComp type="monotone" dataKey={config.yAxis} fill="var(--brand)" stroke="var(--brand)" radius={config.type === "Bar" ? [4, 4, 0, 0] : 0} strokeWidth={2} />
+                        {config.type === "Bar" ? (
+                          <Bar dataKey={config.yAxis} fill="var(--brand)" radius={[4, 4, 0, 0]} />
+                        ) : config.type === "Area" ? (
+                          <Area type="monotone" dataKey={config.yAxis} fill="var(--brand)" stroke="var(--brand)" strokeWidth={2} />
+                        ) : (
+                          <Line type="monotone" dataKey={config.yAxis} stroke="var(--brand)" strokeWidth={2} />
+                        )}
                       </ChartComp>
                     </ResponsiveContainer>
                   </div>
