@@ -2,13 +2,16 @@
 
 import { useState, useMemo } from "react"
 import { useWorkspace, actions, type Report } from "@/lib/store"
-import { Plus, FileText, Download, Trash2, Clock, Save, Copy } from "lucide-react"
+import { Plus, FileText, Download, Trash2, Clock, Save, Copy, Eye, Edit3, Calendar } from "lucide-react"
+import { MarkdownRenderer } from "@/components/dashboard/markdown-renderer"
 
 export default function IntelligencePage() {
   const workspace = useWorkspace()
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
+  const [isPreview, setIsPreview] = useState(true)
+  const [showScheduleDropdown, setShowScheduleDropdown] = useState(false)
 
   const reports = workspace.reports ?? []
   const selectedReport = reports.find(r => r.id === selectedReportId)
@@ -79,6 +82,7 @@ export default function IntelligencePage() {
     setSelectedReportId(id)
     setEditContent(content)
     setEditTitle(title)
+    setIsPreview(true)
   }
 
   const selectReport = (r: Report) => {
@@ -90,6 +94,12 @@ export default function IntelligencePage() {
   const saveReport = () => {
     if (!selectedReportId) return
     actions.updateReport(selectedReportId, { title: editTitle, content: editContent, updatedAt: Date.now() })
+  }
+
+  const setSchedule = (schedule: "daily" | "weekly" | "monthly" | null) => {
+    if (!selectedReportId) return
+    actions.updateReport(selectedReportId, { schedule, updatedAt: Date.now() })
+    setShowScheduleDropdown(false)
   }
 
   const exportMarkdown = () => {
@@ -130,6 +140,7 @@ export default function IntelligencePage() {
               <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 {new Date(r.updatedAt).toLocaleDateString()}
+                {r.schedule && <span className="bg-brand/10 text-brand px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ml-1">🔁 {r.schedule}</span>}
                 {r.isTemplate && <span className="bg-brand/10 text-brand px-1.5 py-0.5 rounded text-[9px] font-bold">TEMPLATE</span>}
               </div>
             </button>
@@ -161,6 +172,29 @@ export default function IntelligencePage() {
                 placeholder="Report title..."
               />
               <div className="flex items-center gap-2">
+                <div className="bg-surface border border-border rounded-lg p-0.5 flex items-center mr-2">
+                  <button onClick={() => setIsPreview(false)} className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${!isPreview ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                    <Edit3 className="w-3 h-3" /> Edit
+                  </button>
+                  <button onClick={() => setIsPreview(true)} className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${isPreview ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                    <Eye className="w-3 h-3" /> Preview
+                  </button>
+                </div>
+                
+                <div className="relative">
+                  <button onClick={() => setShowScheduleDropdown(!showScheduleDropdown)} className={`flex items-center gap-1.5 text-xs font-semibold bg-surface border border-border rounded-lg px-3 py-1.5 hover:border-brand/30 transition-colors ${selectedReport?.schedule ? "text-brand border-brand/30" : ""}`}>
+                    <Calendar className="w-3 h-3" /> {selectedReport?.schedule ? selectedReport.schedule.charAt(0).toUpperCase() + selectedReport.schedule.slice(1) : "Schedule"}
+                  </button>
+                  {showScheduleDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-32 bg-background border border-border rounded-xl shadow-lg overflow-hidden z-10">
+                      <button onClick={() => setSchedule(null)} className="w-full text-left px-4 py-2 text-xs hover:bg-surface transition-colors">None</button>
+                      <button onClick={() => setSchedule("daily")} className="w-full text-left px-4 py-2 text-xs hover:bg-surface transition-colors">Daily</button>
+                      <button onClick={() => setSchedule("weekly")} className="w-full text-left px-4 py-2 text-xs hover:bg-surface transition-colors">Weekly</button>
+                      <button onClick={() => setSchedule("monthly")} className="w-full text-left px-4 py-2 text-xs hover:bg-surface transition-colors">Monthly</button>
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={saveReport} className="flex items-center gap-1.5 text-xs font-semibold bg-surface border border-border rounded-lg px-3 py-1.5 hover:border-brand/30 transition-colors">
                   <Save className="w-3 h-3" /> Save
                 </button>
@@ -183,13 +217,24 @@ export default function IntelligencePage() {
             </div>
 
             {/* Editor Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <textarea
-                value={editContent}
-                onChange={e => setEditContent(e.target.value)}
-                className="w-full h-full min-h-[500px] bg-transparent outline-none text-sm font-mono leading-relaxed resize-none"
-                placeholder="Write your report in Markdown..."
-              />
+            <div className="flex-1 overflow-y-auto p-6 bg-surface/30">
+              <div className="max-w-4xl mx-auto h-full">
+                {isPreview ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none w-full bg-background border border-border rounded-xl p-8 min-h-[500px] shadow-sm">
+                    <MarkdownRenderer content={editContent} />
+                  </div>
+                ) : (
+                  <textarea
+                    value={editContent}
+                    onChange={e => {
+                      setEditContent(e.target.value)
+                      actions.updateReport(selectedReportId!, { content: e.target.value })
+                    }}
+                    className="w-full h-full min-h-[500px] bg-background border border-border rounded-xl p-6 outline-none text-sm font-mono leading-relaxed resize-none shadow-sm focus:border-brand/50 transition-colors"
+                    placeholder="Write your report in Markdown..."
+                  />
+                )}
+              </div>
             </div>
           </>
         ) : (

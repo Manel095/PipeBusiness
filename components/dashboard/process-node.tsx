@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react"
 import { actions, type ProcessNode as ProcessNodeType } from "@/lib/store"
-import { ENGINE_TYPE_LABELS } from "@/lib/demo-data"
 import { ArrowDownLeft } from "lucide-react"
 
 interface ProcessNodeProps {
@@ -70,14 +69,13 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
     }
   }, [process.id, isConnecting, onEndConnection])
 
-  const engineLabel = process.config?.engineType
-    ? ENGINE_TYPE_LABELS[process.config.engineType] ?? "Engine"
-    : "Engine"
+  const engineLabel = process.config?.engineType || "Engine"
 
   const hasIncoming = (process.incomingData?.length ?? 0) > 0
 
   return (
     <div
+      id={process.id}
       ref={nodeRef}
       className={`process-node ${selected ? "process-node-selected" : ""}`}
       style={{ left: process.position.x, top: process.position.y }}

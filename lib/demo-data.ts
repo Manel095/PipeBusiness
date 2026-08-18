@@ -21,7 +21,7 @@ function timeSeries(days: number, baseFn: (i: number) => DataRow): DataRow[] {
 
 /* ─── Engine Configs ─── */
 const MARKETING_CONFIG: EngineConfig = {
-  engineType: "leads",
+  engineType: "Lead Engine",
   entityType: "client",
   inputSchema: [
     { key: "lead_id", label: "Lead ID", type: "string" },
@@ -38,7 +38,7 @@ const MARKETING_CONFIG: EngineConfig = {
 }
 
 const SALES_CONFIG: EngineConfig = {
-  engineType: "cash",
+  engineType: "Cash Engine",
   entityType: "sale",
   inputSchema: [
     { key: "client_id", label: "Client ID", type: "string" },
@@ -54,7 +54,7 @@ const SALES_CONFIG: EngineConfig = {
 }
 
 const OPERATIONS_CONFIG: EngineConfig = {
-  engineType: "projects",
+  engineType: "Project Engine",
   entityType: "project",
   inputSchema: [
     { key: "project_id", label: "Project ID", type: "string" },
@@ -70,7 +70,7 @@ const OPERATIONS_CONFIG: EngineConfig = {
 }
 
 const SUPPORT_CONFIG: EngineConfig = {
-  engineType: "custom",
+  engineType: "Task Engine",
   entityType: "task",
   inputSchema: [
     { key: "ticket_id", label: "Ticket ID", type: "string" },
@@ -86,7 +86,7 @@ const SUPPORT_CONFIG: EngineConfig = {
 }
 
 const FINANCE_CONFIG: EngineConfig = {
-  engineType: "billing",
+  engineType: "Billing Engine",
   entityType: "transaction",
   inputSchema: [
     { key: "invoice_id", label: "Invoice ID", type: "string" },
@@ -253,10 +253,3 @@ export function getAllMetrics(): { processId: string; processName: string; metri
 }
 
 /* ─── Engine type labels ─── */
-export const ENGINE_TYPE_LABELS: Record<string, string> = {
-  cash: "Cash Engine",
-  projects: "Project Engine",
-  billing: "Billing Engine",
-  leads: "Lead Engine",
-  custom: "Custom Engine",
-}

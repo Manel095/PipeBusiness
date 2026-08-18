@@ -7,7 +7,7 @@ import { ConnectionLine } from "./connection-line"
 import { ProcessDetail } from "./process-detail"
 import { DataImportModal } from "./data-import-modal"
 import { ConnectionModal } from "./connection-modal"
-import { Plus, Link2, Undo2, Redo2 } from "lucide-react"
+import { Plus, Link2, Undo2, Redo2, LayoutTemplate } from "lucide-react"
 
 export function Canvas() {
   const workspace = useWorkspace()
@@ -72,8 +72,12 @@ export function Canvas() {
 
   // Get node center position for connection lines
   const getNodeCenter = useCallback((proc: ProcessNodeType, side: "left" | "right") => {
+    let nodeH = 100
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById(proc.id)
+      if (el) nodeH = el.clientHeight
+    }
     const nodeW = 220
-    const nodeH = 100
     return {
       x: proc.position.x + (side === "right" ? nodeW : 0),
       y: proc.position.y + nodeH / 2,
@@ -191,6 +195,10 @@ export function Canvas() {
           </button>
           <button type="button" className="hero-toolbar-btn" title="Connect">
             <Link2 className="h-4 w-4" />
+          </button>
+          <div className="hero-toolbar-sep" />
+          <button type="button" className="hero-toolbar-btn" title="Auto Layout" onClick={() => actions.autoLayout()}>
+            <LayoutTemplate className="h-4 w-4" />
           </button>
           <div className="hero-toolbar-sep" />
           <button type="button" className="hero-toolbar-btn" title="Undo">

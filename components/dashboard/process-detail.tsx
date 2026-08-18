@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { X, Trash2, Plus, Webhook, FileSpreadsheet, Keyboard, Globe, Sheet, Zap, Workflow, ArrowDownLeft, ArrowUpRight, Settings2 } from "lucide-react"
-import { actions, useWorkspace, type SchemaField, type KPIDefinition, type EngineType } from "@/lib/store"
-import { ENGINE_TYPE_LABELS } from "@/lib/demo-data"
+import { actions, useWorkspace, type SchemaField, type KPIDefinition } from "@/lib/store"
 
 const STATUS_COLORS: Record<string, string> = {
   active: "#10b981",
@@ -21,15 +20,8 @@ const SOURCE_ICONS: Record<string, React.ReactNode> = {
   n8n: <Workflow className="h-4 w-4" />,
 }
 
-const ENGINE_TYPES: { key: EngineType; label: string }[] = [
-  { key: "cash", label: "Cash Engine" },
-  { key: "projects", label: "Project Engine" },
-  { key: "billing", label: "Billing Engine" },
-  { key: "leads", label: "Lead Engine" },
-  { key: "custom", label: "Custom Engine" },
-]
-
-const ENTITY_TYPES = ["client", "project", "task", "sale", "transaction"] as const
+const PRESET_ENGINE_TYPES = ["Cash Engine", "Project Engine", "Billing Engine", "Lead Engine", "Custom Engine"]
+const PRESET_ENTITY_TYPES = ["client", "project", "task", "sale", "transaction"]
 
 export function ProcessDetail({ processId }: { processId: string }) {
   const workspace = useWorkspace()
@@ -40,7 +32,7 @@ export function ProcessDetail({ processId }: { processId: string }) {
 
   if (!process) return null
 
-  const config = process.config ?? { engineType: "custom" as EngineType, inputSchema: [], kpis: [], entityType: "client" as const }
+  const config = process.config ?? { engineType: "Custom Engine", inputSchema: [], kpis: [], entityType: "client" }
 
   const tabs = [
     { key: "config" as const, label: "Configuration" },
@@ -52,7 +44,7 @@ export function ProcessDetail({ processId }: { processId: string }) {
   const inConnectors = workspace.connectors.filter(c => c.to === processId)
   const outConnectors = workspace.connectors.filter(c => c.from === processId)
 
-  const engineLabel = ENGINE_TYPE_LABELS[config.engineType] ?? "Engine"
+  const engineLabel = config.engineType || "Engine"
 
   return (
     <div className="detail-panel">
@@ -122,17 +114,23 @@ export function ProcessDetail({ processId }: { processId: string }) {
             {/* Engine Type */}
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">Engine Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {ENGINE_TYPES.map(et => (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand mb-3"
+                value={config.engineType}
+                onChange={(e) => actions.updateProcess(processId, { config: { ...config, engineType: e.target.value } })}
+                placeholder="e.g. Lead Engine"
+              />
+              <div className="flex flex-wrap gap-2">
+                {PRESET_ENGINE_TYPES.map(et => (
                   <button
-                    key={et.key}
+                    key={et}
                     type="button"
-                    onClick={() => actions.updateProcess(processId, { config: { ...config, engineType: et.key } })}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-medium text-left transition-colors ${
-                      config.engineType === et.key ? "border-brand bg-brand/5 text-brand" : "border-border hover:border-brand/30"
+                    onClick={() => actions.updateProcess(processId, { config: { ...config, engineType: et } })}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      config.engineType === et ? "bg-brand text-white" : "bg-surface border border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {et.label}
+                    {et}
                   </button>
                 ))}
               </div>
@@ -141,8 +139,14 @@ export function ProcessDetail({ processId }: { processId: string }) {
             {/* Entity Type */}
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">Entity Type</label>
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand mb-3"
+                value={config.entityType}
+                onChange={(e) => actions.updateProcess(processId, { config: { ...config, entityType: e.target.value } })}
+                placeholder="e.g. client, project..."
+              />
               <div className="flex flex-wrap gap-2">
-                {ENTITY_TYPES.map(et => (
+                {PRESET_ENTITY_TYPES.map(et => (
                   <button
                     key={et}
                     type="button"
@@ -163,16 +167,48 @@ export function ProcessDetail({ processId }: { processId: string }) {
               <div className="space-y-2">
                 {(config.inputSchema ?? []).map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3">
-                    <code className="text-xs font-mono text-brand flex-1">{field.key}</code>
-                    <span className="text-xs text-muted-foreground">{field.label}</span>
-                    <span className="text-[10px] bg-background border border-border px-1.5 py-0.5 rounded text-muted-foreground uppercase">{field.type}</span>
+                    <input
+                      className="text-xs font-mono text-brand bg-transparent border-b border-dashed border-border outline-none w-28"
+                      value={field.key}
+                      onChange={(e) => {
+                        const newSchema = [...config.inputSchema];
+                        newSchema[idx] = { ...field, key: e.target.value };
+                        actions.updateProcess(processId, { config: { ...config, inputSchema: newSchema } });
+                      }}
+                      placeholder="key"
+                    />
+                    <input
+                      className="text-xs text-foreground bg-transparent border-b border-dashed border-border outline-none flex-1"
+                      value={field.label}
+                      onChange={(e) => {
+                        const newSchema = [...config.inputSchema];
+                        newSchema[idx] = { ...field, label: e.target.value };
+                        actions.updateProcess(processId, { config: { ...config, inputSchema: newSchema } });
+                      }}
+                      placeholder="Label"
+                    />
+                    <select
+                      className="text-[10px] bg-background border border-border px-1 py-0.5 rounded text-muted-foreground uppercase outline-none"
+                      value={field.type}
+                      onChange={(e) => {
+                        const newSchema = [...config.inputSchema];
+                        newSchema[idx] = { ...field, type: e.target.value as any };
+                        actions.updateProcess(processId, { config: { ...config, inputSchema: newSchema } });
+                      }}
+                    >
+                      <option value="string">STRING</option>
+                      <option value="number">NUMBER</option>
+                      <option value="date">DATE</option>
+                      <option value="currency">CURRENCY</option>
+                      <option value="boolean">BOOLEAN</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => {
                         const newSchema = config.inputSchema.filter((_, i) => i !== idx)
                         actions.updateProcess(processId, { config: { ...config, inputSchema: newSchema } })
                       }}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive ml-1"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -331,29 +367,76 @@ export function ProcessDetail({ processId }: { processId: string }) {
               const lastRow = process.data[process.data.length - 1]
               const val = lastRow?.[kpi.field]
               return (
-                <div key={kpi.id} className="flex items-center justify-between rounded-xl border border-border bg-surface p-4">
-                  <div>
-                    <p className="text-sm font-semibold">{kpi.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Field: <code className="font-mono text-brand">{kpi.field}</code> · {kpi.unit} · {kpi.direction === "up" ? "↑ Higher is better" : "↓ Lower is better"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {val !== undefined && (
-                      <span className="text-lg font-extrabold">
-                        {kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` : kpi.unit === "percentage" ? `${val}%` : Number(val).toLocaleString()}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newKpis = config.kpis.filter((_, i) => i !== idx)
-                        actions.updateProcess(processId, { config: { ...config, kpis: newKpis } })
-                      }}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                <div key={kpi.id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex flex-col gap-1 w-full">
+                      <input
+                        className="text-sm font-semibold bg-transparent border-b border-dashed border-border outline-none w-full max-w-[200px]"
+                        value={kpi.name}
+                        onChange={(e) => {
+                          const newKpis = [...config.kpis];
+                          newKpis[idx] = { ...kpi, name: e.target.value };
+                          actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                        }}
+                        placeholder="KPI Name"
+                      />
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">Field:</span>
+                        <input
+                          className="text-xs font-mono text-brand bg-transparent border-b border-dashed border-border outline-none w-20"
+                          value={kpi.field}
+                          onChange={(e) => {
+                            const newKpis = [...config.kpis];
+                            newKpis[idx] = { ...kpi, field: e.target.value };
+                            actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                          }}
+                          placeholder="field_key"
+                        />
+                        <select
+                          className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                          value={kpi.unit}
+                          onChange={(e) => {
+                            const newKpis = [...config.kpis];
+                            newKpis[idx] = { ...kpi, unit: e.target.value as any };
+                            actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                          }}
+                        >
+                          <option value="count">Count</option>
+                          <option value="currency">Currency</option>
+                          <option value="percentage">Percentage</option>
+                          <option value="time">Time</option>
+                        </select>
+                        <select
+                          className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                          value={kpi.direction}
+                          onChange={(e) => {
+                            const newKpis = [...config.kpis];
+                            newKpis[idx] = { ...kpi, direction: e.target.value as any };
+                            actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                          }}
+                        >
+                          <option value="up">↑ Higher is better</option>
+                          <option value="down">↓ Lower is better</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {val !== undefined && (
+                        <span className="text-lg font-extrabold text-foreground bg-background px-2 py-1 rounded-lg border border-border">
+                          {kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` : kpi.unit === "percentage" ? `${val}%` : Number(val).toLocaleString()}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newKpis = config.kpis.filter((_, i) => i !== idx)
+                          actions.updateProcess(processId, { config: { ...config, kpis: newKpis } })
+                        }}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

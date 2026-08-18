@@ -13,7 +13,16 @@ export function CommandPalette() {
   const [query, setQuery] = useState("")
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [cmdResult, setCmdResult] = useState<CommandResult>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [wizard, setWizard] = useState<{
+    type: "graph" | "metric"
+    step: number
+    engine?: string
+    chartType?: string
+    xAxis?: string
+    yAxis?: string
+    field?: string
+    period?: string
+  } | null>(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
@@ -96,7 +105,19 @@ export function CommandPalette() {
       return { success: true, message: `${proc.name} (${proc.status}) — ${kpiSummary || "No KPIs defined"}` }
     }
 
-    return { success: false, message: `Unknown command "${cmd}". Available: /create, /connect, /update, /report, /status` }
+    // /graph
+    if (cmd === "/graph") {
+      setWizard({ type: "graph", step: 1 })
+      return null
+    }
+
+    // /metric
+    if (cmd === "/metric") {
+      setWizard({ type: "metric", step: 1 })
+      return null
+    }
+
+    return { success: false, message: `Unknown command "${cmd}". Available: /create, /connect, /update, /report, /status, /graph, /metric` }
   }
 
   // ─── Search Items ───
@@ -123,17 +144,156 @@ export function CommandPalette() {
   useEffect(() => { setSelectedIdx(0); setCmdResult(null) }, [query])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (wizard) return // handled by wizard UI
+
     if (isCommand && e.key === "Enter") {
       e.preventDefault()
       const result = executeCommand(query)
-      setCmdResult(result)
-      if (result?.success) setTimeout(() => actions.toggleCommandPalette(false), 1500)
+      if (result) {
+        setCmdResult(result)
+        if (result.success) setTimeout(() => actions.toggleCommandPalette(false), 1500)
+      }
       return
     }
     if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, filtered.length - 1)) }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)) }
     else if (e.key === "Enter" && filtered[selectedIdx]) { filtered[selectedIdx].action() }
     else if (e.key === "Escape") { actions.toggleCommandPalette(false) }
+  }
+
+  // ─── Wizard Helpers ───
+  const insertToReport = (block: string) => {
+    const report = workspace.reports[0] // or currently selected
+    if (report) {
+      actions.updateReport(report.id, { content: report.content + "\n\n" + block, updatedAt: Date.now() })
+      setCmdResult({ success: true, message: "Added to your recent report! Check Intelligence." })
+      setTimeout(() => actions.toggleCommandPalette(false), 2000)
+    } else {
+      setCmdResult({ success: false, message: "No reports available. Create a report first." })
+      setWizard(null)
+    }
+  }
+
+  const handleWizardNext = (updates: Partial<typeof wizard>) => {
+    const next = { ...wizard, ...updates } as NonNullable<typeof wizard>
+    
+    if (next.type === "graph" && next.step > 4) {
+      const block = `\`\`\`chart\n${JSON.stringify({
+        engine: next.engine, type: next.chartType, xAxis: next.xAxis, yAxis: next.yAxis
+      }, null, 2)}\n\`\`\``
+      insertToReport(block)
+      setWizard(null)
+      return
+    }
+    
+    if (next.type === "metric" && next.step > 3) {
+      const block = `\`\`\`metric\n${JSON.stringify({
+        engine: next.engine, field: next.field, period: next.period
+      }, null, 2)}\n\`\`\``
+      insertToReport(block)
+      setWizard(null)
+      return
+    }
+
+    setWizard(next)
+  }
+
+  const renderWizard = () => {
+    if (!wizard) return null
+
+    if (wizard.type === "graph") {
+      if (wizard.step === 1) {
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">1. Select Engine for Chart</h3>
+            <div className="space-y-1">
+              {workspace.processes.map(p => (
+                <button key={p.id} onClick={() => handleWizardNext({ engine: p.name, step: 2 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{p.name}</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      if (wizard.step === 2) {
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">2. Select Chart Type</h3>
+            <div className="space-y-1">
+              {["Line", "Bar", "Area"].map(t => (
+                <button key={t} onClick={() => handleWizardNext({ chartType: t, step: 3 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{t} Chart</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      if (wizard.step === 3) {
+        const p = workspace.processes.find(pr => pr.name === wizard.engine)
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">3. Select X-Axis Field (e.g., date)</h3>
+            <div className="space-y-1">
+              {p?.config?.inputSchema?.map(f => (
+                <button key={f.key} onClick={() => handleWizardNext({ xAxis: f.key, step: 4 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{f.label} ({f.key})</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      if (wizard.step === 4) {
+        const p = workspace.processes.find(pr => pr.name === wizard.engine)
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">4. Select Y-Axis Field (e.g., revenue)</h3>
+            <div className="space-y-1">
+              {p?.config?.inputSchema?.filter(f => f.type === "number" || f.type === "currency").map(f => (
+                <button key={f.key} onClick={() => handleWizardNext({ yAxis: f.key, step: 5 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{f.label} ({f.key})</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+    }
+
+    if (wizard.type === "metric") {
+      if (wizard.step === 1) {
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">1. Select Engine for Metric</h3>
+            <div className="space-y-1">
+              {workspace.processes.map(p => (
+                <button key={p.id} onClick={() => handleWizardNext({ engine: p.name, step: 2 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{p.name}</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      if (wizard.step === 2) {
+        const p = workspace.processes.find(pr => pr.name === wizard.engine)
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">2. Select Metric Field to Compare</h3>
+            <div className="space-y-1">
+              {p?.config?.kpis?.map(k => (
+                <button key={k.field} onClick={() => handleWizardNext({ field: k.field, step: 3 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors">{k.name} ({k.field})</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      if (wizard.step === 3) {
+        return (
+          <div className="p-4">
+            <h3 className="text-sm font-bold mb-3">3. Select Comparison Period</h3>
+            <div className="space-y-1">
+              {["day", "week", "month", "quarter", "year"].map(p => (
+                <button key={p} onClick={() => handleWizardNext({ period: p, step: 4 })} className="w-full text-left px-3 py-2 hover:bg-surface rounded-lg text-sm transition-colors capitalize">Previous {p}</button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+    }
+    return null
   }
 
   // ─── Command hints ───
@@ -143,6 +303,8 @@ export function CommandPalette() {
     { cmd: "/update", desc: "<Engine> <webhook|api> <url>", example: "/update Marketing webhook https://new.hook.io" },
     { cmd: "/report", desc: "[Engine] [period]", example: "/report Sales monthly" },
     { cmd: "/status", desc: "<Engine>", example: "/status Marketing" },
+    { cmd: "/graph", desc: "Open interactive chart wizard", example: "/graph" },
+    { cmd: "/metric", desc: "Open comparative metric wizard", example: "/metric" },
   ]
 
   const matchingHints = isCommand ? CMD_HINTS.filter(h => h.cmd.startsWith(query.split(" ")[0])) : []
@@ -157,11 +319,17 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder='Search or type "/" for commands...'
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            disabled={wizard !== null}
+            placeholder={wizard ? `Configuring ${wizard.type}...` : 'Search or type "/" for commands...'}
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
           />
-          <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">ESC</kbd>
+          {wizard && (
+            <button onClick={() => setWizard(null)} className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground">Cancel</button>
+          )}
+          {!wizard && <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">ESC</kbd>}
         </div>
+
+        {wizard && renderWizard()}
 
         {/* Command Result */}
         {cmdResult && (
@@ -172,7 +340,7 @@ export function CommandPalette() {
         )}
 
         {/* Command Hints */}
-        {isCommand && !cmdResult && matchingHints.length > 0 && (
+        {isCommand && !cmdResult && !wizard && matchingHints.length > 0 && (
           <div className="p-2 border-b border-border">
             {matchingHints.map(h => (
               <button
@@ -189,7 +357,7 @@ export function CommandPalette() {
         )}
 
         {/* Search Results */}
-        {!isCommand && (
+        {!isCommand && !wizard && (
           <div className="max-h-[320px] overflow-y-auto p-2">
             {filtered.length > 0 ? (
               filtered.map((item, i) => (

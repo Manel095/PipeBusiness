@@ -12,7 +12,7 @@ export type DataSource = {
   type: DataSourceType
   name: string
   config: Record<string, string>
-  entityType?: "client" | "project" | "task" | "sale" | "transaction"
+  entityType?: string
   createdAt: number
 }
 
@@ -25,7 +25,7 @@ export type ProcessStep = {
 }
 
 /* ─── Engine Configuration ─── */
-export type EngineType = "cash" | "projects" | "billing" | "leads" | "custom"
+export type EngineType = string
 
 export type SchemaField = {
   key: string
@@ -45,7 +45,7 @@ export type EngineConfig = {
   engineType: EngineType
   inputSchema: SchemaField[]
   kpis: KPIDefinition[]
-  entityType: "client" | "project" | "task" | "sale" | "transaction"
+  entityType: string
 }
 
 /* ─── Process (Engine) Node ─── */
@@ -199,6 +199,79 @@ export const actions = {
       ...state,
       processes: state.processes.map((p) => (p.id === id ? { ...p, position } : p)),
     }
+    emit()
+  },
+
+  autoLayout() {
+    // Simple DAG layout: left-to-right
+    const processes = [...state.processes]
+    const connectors = state.connectors
+
+    const inDegree: Record<string, number> = {}
+    const outEdges: Record<string, string[]> = {}
+    
+    processes.forEach(p => {
+      inDegree[p.id] = 0
+      outEdges[p.id] = []
+    })
+
+    connectors.forEach(c => {
+      if (inDegree[c.to] !== undefined) inDegree[c.to]++
+      if (outEdges[c.from]) outEdges[c.from].push(c.to)
+    })
+
+    const levels: Record<string, number> = {}
+    const queue: { id: string, level: number }[] = []
+
+    processes.forEach(p => {
+      if (inDegree[p.id] === 0) {
+        queue.push({ id: p.id, level: 0 })
+      }
+    })
+
+    // If there are cycles or no roots, just add everything arbitrarily
+    if (queue.length === 0 && processes.length > 0) {
+      queue.push({ id: processes[0].id, level: 0 })
+    }
+
+    const visited = new Set<string>()
+
+    while (queue.length > 0) {
+      const { id, level } = queue.shift()!
+      if (visited.has(id)) continue
+      visited.add(id)
+      
+      levels[id] = Math.max(levels[id] || 0, level)
+
+      ;(outEdges[id] || []).forEach(to => {
+        queue.push({ id: to, level: levels[id] + 1 })
+      })
+    }
+
+    // For any unvisited nodes (disconnected or cycles)
+    processes.forEach(p => {
+      if (!visited.has(p.id)) {
+        levels[p.id] = 0
+      }
+    })
+
+    const levelCounts: Record<number, number> = {}
+    
+    const newProcesses = processes.map(p => {
+      const lvl = levels[p.id] || 0
+      const idx = levelCounts[lvl] || 0
+      levelCounts[lvl] = idx + 1
+
+      return {
+        ...p,
+        position: {
+          x: 100 + lvl * 320,
+          y: 100 + idx * 180
+        }
+      }
+    })
+
+    state = { ...state, processes: newProcesses }
     emit()
   },
 
