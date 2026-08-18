@@ -1,159 +1,222 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Search, CornerDownLeft, BarChart3, LayoutDashboard, Settings, ArrowRight } from "lucide-react"
+import { Search, CornerDownLeft, ArrowRight, Terminal, CheckCircle2, AlertCircle } from "lucide-react"
 import { actions, useWorkspace } from "@/lib/store"
 import { useRouter } from "next/navigation"
+
+type CommandResult = { success: boolean; message: string } | null
 
 export function CommandPalette() {
   const workspace = useWorkspace()
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [selectedIdx, setSelectedIdx] = useState(0)
+  const [cmdResult, setCmdResult] = useState<CommandResult>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  useEffect(() => { inputRef.current?.focus() }, [])
 
-  // Build search items
-  const items = [
-    ...workspace.processes.map((p) => ({
-      id: p.id,
-      type: "process" as const,
-      icon: p.icon,
-      label: p.name,
-      desc: `${p.data.length} rows · ${p.dataSources.length} sources`,
-      action: () => {
-        actions.selectProcess(p.id)
-        actions.toggleCommandPalette(false)
-      },
-    })),
-    {
-      id: "nav-workspace",
-      type: "nav" as const,
-      icon: "🗂",
-      label: "Go to Workspace",
-      desc: "Canvas view",
-      action: () => {
-        router.push("/dashboard")
-        actions.toggleCommandPalette(false)
-      },
-    },
-    {
-      id: "nav-intelligence",
-      type: "nav" as const,
-      icon: "📊",
-      label: "Go to Intelligence",
-      desc: "Charts & reports",
-      action: () => {
-        router.push("/dashboard/intelligence")
-        actions.toggleCommandPalette(false)
-      },
-    },
-    {
-      id: "nav-settings",
-      type: "nav" as const,
-      icon: "⚙️",
-      label: "Go to Settings",
-      desc: "Account & subscription",
-      action: () => {
-        router.push("/dashboard/settings")
-        actions.toggleCommandPalette(false)
-      },
-    },
-    {
-      id: "add-process",
-      type: "action" as const,
-      icon: "➕",
-      label: "Add new process",
-      desc: "Create a new node on the canvas",
-      action: () => {
-        const id = `proc-${Date.now()}`
-        actions.addProcess({
-          id,
-          name: "New Process",
-          icon: "📌",
-          description: "",
-          position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-          color: "#FF0083",
-          dataSources: [],
-          data: [],
-          status: "draft",
-        })
-        actions.toggleCommandPalette(false)
-      },
-    },
-  ]
+  const isCommand = query.startsWith("/")
 
-  const filtered = query
-    ? items.filter((item) =>
-        item.label.toLowerCase().includes(query.toLowerCase()) ||
-        item.desc.toLowerCase().includes(query.toLowerCase())
-      )
-    : items
+  // ─── Command Parser ───
+  const executeCommand = (input: string): CommandResult => {
+    const parts = input.trim().split(/\s+/)
+    const cmd = parts[0]?.toLowerCase()
 
-  useEffect(() => {
-    setSelectedIdx(0)
-  }, [query])
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setSelectedIdx((i) => Math.min(i + 1, filtered.length - 1))
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setSelectedIdx((i) => Math.max(i - 1, 0))
-    } else if (e.key === "Enter" && filtered[selectedIdx]) {
-      filtered[selectedIdx].action()
-    } else if (e.key === "Escape") {
-      actions.toggleCommandPalette(false)
+    // /create <name> <type> <url?>
+    if (cmd === "/create") {
+      const name = parts[1]
+      const type = parts[2] as "webhook" | "api" | undefined
+      const url = parts[3]
+      if (!name) return { success: false, message: "Usage: /create <EngineName> [webhook|api] [url]" }
+      const id = `proc-${Date.now()}`
+      actions.addProcess({
+        id, name, description: "",
+        position: { x: 200 + Math.random() * 300, y: 150 + Math.random() * 200 },
+        color: ["#FF0083", "#6366F1", "#10B981", "#F59E0B", "#8B5CF6"][Math.floor(Math.random() * 5)],
+        dataSources: type && url ? [{ id: `ds-${Date.now()}`, type, name: `${name} ${type}`, config: { url }, createdAt: Date.now() }] : [],
+        data: [], incomingData: [],
+        config: { engineType: "custom", inputSchema: [], kpis: [], entityType: "client" },
+        status: "active",
+      })
+      return { success: true, message: `Engine "${name}" created${type ? ` with ${type} at ${url}` : ""}` }
     }
+
+    // /connect <from> <to> <name?>
+    if (cmd === "/connect") {
+      const fromName = parts[1]
+      const toName = parts[2]
+      const connName = parts.slice(3).join(" ").replace(/"/g, "") || `${fromName} → ${toName}`
+      if (!fromName || !toName) return { success: false, message: 'Usage: /connect <FromEngine> <ToEngine> ["Connector Name"]' }
+      const fromProc = workspace.processes.find(p => p.name.toLowerCase() === fromName.toLowerCase())
+      const toProc = workspace.processes.find(p => p.name.toLowerCase() === toName.toLowerCase())
+      if (!fromProc) return { success: false, message: `Engine "${fromName}" not found` }
+      if (!toProc) return { success: false, message: `Engine "${toName}" not found` }
+      actions.addConnector({ id: `conn-${Date.now()}`, name: connName, from: fromProc.id, to: toProc.id, dataFlowFields: [] })
+      return { success: true, message: `Connector "${connName}" created: ${fromProc.name} → ${toProc.name}` }
+    }
+
+    // /update <engine> <type> <url>
+    if (cmd === "/update") {
+      const engineName = parts[1]
+      const type = parts[2] as "webhook" | "api" | undefined
+      const url = parts[3]
+      if (!engineName || !type || !url) return { success: false, message: "Usage: /update <EngineName> <webhook|api> <url>" }
+      const proc = workspace.processes.find(p => p.name.toLowerCase() === engineName.toLowerCase())
+      if (!proc) return { success: false, message: `Engine "${engineName}" not found` }
+      actions.addDataSource(proc.id, { id: `ds-${Date.now()}`, type, name: `${engineName} ${type}`, config: { url }, createdAt: Date.now() })
+      return { success: true, message: `Added ${type} source to "${proc.name}" at ${url}` }
+    }
+
+    // /report <engine?> <period?>
+    if (cmd === "/report") {
+      const engineName = parts[1]
+      const period = parts[2] || "snapshot"
+      router.push("/dashboard/intelligence")
+      actions.toggleCommandPalette(false)
+      const proc = engineName ? workspace.processes.find(p => p.name.toLowerCase() === engineName.toLowerCase()) : null
+      const reportId = `report-${Date.now()}`
+      const title = proc ? `${proc.name} — ${period} report` : `Business Snapshot — ${new Date().toLocaleDateString()}`
+      actions.addReport({ id: reportId, title, content: `# ${title}\n\nGenerated on ${new Date().toLocaleString()}\n\n---\n\n`, engineId: proc?.id, createdAt: Date.now(), updatedAt: Date.now(), isTemplate: false })
+      return { success: true, message: `Report "${title}" created. Opening Intelligence...` }
+    }
+
+    // /status <engine>
+    if (cmd === "/status") {
+      const engineName = parts[1]
+      if (!engineName) return { success: false, message: "Usage: /status <EngineName>" }
+      const proc = workspace.processes.find(p => p.name.toLowerCase() === engineName.toLowerCase())
+      if (!proc) return { success: false, message: `Engine "${engineName}" not found` }
+      const lastRow = proc.data[proc.data.length - 1]
+      const kpiSummary = (proc.config?.kpis ?? []).map(kpi => {
+        const val = lastRow?.[kpi.field]
+        return `${kpi.name}: ${val !== undefined ? (kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` : val) : "N/A"}`
+      }).join(" · ")
+      return { success: true, message: `${proc.name} (${proc.status}) — ${kpiSummary || "No KPIs defined"}` }
+    }
+
+    return { success: false, message: `Unknown command "${cmd}". Available: /create, /connect, /update, /report, /status` }
   }
 
+  // ─── Search Items ───
+  const items = [
+    ...workspace.processes.map((p) => ({
+      id: p.id, type: "process" as const,
+      label: p.name, desc: `${p.config?.engineType ?? "custom"} · ${p.dataSources.length} sources`,
+      action: () => { actions.selectProcess(p.id); actions.toggleCommandPalette(false) },
+    })),
+    { id: "nav-workspace", type: "nav" as const, label: "Go to Workspace", desc: "Canvas view",
+      action: () => { router.push("/dashboard"); actions.toggleCommandPalette(false) } },
+    { id: "nav-intelligence", type: "nav" as const, label: "Go to Intelligence", desc: "Reports & analysis",
+      action: () => { router.push("/dashboard/intelligence"); actions.toggleCommandPalette(false) } },
+    { id: "nav-connections", type: "nav" as const, label: "Go to Connections", desc: "Manage connectors",
+      action: () => { router.push("/dashboard/connections"); actions.toggleCommandPalette(false) } },
+    { id: "nav-settings", type: "nav" as const, label: "Go to Settings", desc: "Account & data",
+      action: () => { router.push("/dashboard/settings"); actions.toggleCommandPalette(false) } },
+  ]
+
+  const filtered = query && !isCommand
+    ? items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()) || item.desc.toLowerCase().includes(query.toLowerCase()))
+    : items
+
+  useEffect(() => { setSelectedIdx(0); setCmdResult(null) }, [query])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isCommand && e.key === "Enter") {
+      e.preventDefault()
+      const result = executeCommand(query)
+      setCmdResult(result)
+      if (result?.success) setTimeout(() => actions.toggleCommandPalette(false), 1500)
+      return
+    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, filtered.length - 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)) }
+    else if (e.key === "Enter" && filtered[selectedIdx]) { filtered[selectedIdx].action() }
+    else if (e.key === "Escape") { actions.toggleCommandPalette(false) }
+  }
+
+  // ─── Command hints ───
+  const CMD_HINTS = [
+    { cmd: "/create", desc: "<Name> [webhook|api] [url]", example: '/create Marketing webhook https://api.test.com' },
+    { cmd: "/connect", desc: '<From> <To> ["Name"]', example: '/connect Marketing Sales "Lead Handoff"' },
+    { cmd: "/update", desc: "<Engine> <webhook|api> <url>", example: "/update Marketing webhook https://new.hook.io" },
+    { cmd: "/report", desc: "[Engine] [period]", example: "/report Sales monthly" },
+    { cmd: "/status", desc: "<Engine>", example: "/status Marketing" },
+  ]
+
+  const matchingHints = isCommand ? CMD_HINTS.filter(h => h.cmd.startsWith(query.split(" ")[0])) : []
+
   return (
-    <div
-      className="command-palette-overlay"
-      onClick={() => actions.toggleCommandPalette(false)}
-    >
+    <div className="command-palette-overlay" onClick={() => actions.toggleCommandPalette(false)}>
       <div className="command-palette" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <Search className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0" />
+          {isCommand ? <Terminal className="h-4.5 w-4.5 text-brand flex-shrink-0" /> : <Search className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0" />}
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search processes, navigate, run actions..."
+            placeholder='Search or type "/" for commands...'
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
-          <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            ESC
-          </kbd>
+          <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">ESC</kbd>
         </div>
-        <div className="max-h-[320px] overflow-y-auto p-2">
-          {filtered.length > 0 ? (
-            filtered.map((item, i) => (
+
+        {/* Command Result */}
+        {cmdResult && (
+          <div className={`mx-2 mt-2 rounded-xl px-4 py-3 flex items-center gap-2 text-sm ${cmdResult.success ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500"}`}>
+            {cmdResult.success ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+            {cmdResult.message}
+          </div>
+        )}
+
+        {/* Command Hints */}
+        {isCommand && !cmdResult && matchingHints.length > 0 && (
+          <div className="p-2 border-b border-border">
+            {matchingHints.map(h => (
               <button
-                key={item.id}
+                key={h.cmd}
                 type="button"
-                onClick={item.action}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                  i === selectedIdx ? "bg-brand/10 text-brand" : "text-foreground hover:bg-surface"
-                }`}
+                onClick={() => setQuery(h.example)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-surface"
               >
-                <span className="text-base flex-shrink-0">{item.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.label}</p>
-                  <p className="text-xs text-muted-foreground truncate">{item.desc}</p>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                <code className="text-xs text-brand font-mono font-bold">{h.cmd}</code>
+                <span className="text-xs text-muted-foreground">{h.desc}</span>
               </button>
-            ))
-          ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground">No results found</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search Results */}
+        {!isCommand && (
+          <div className="max-h-[320px] overflow-y-auto p-2">
+            {filtered.length > 0 ? (
+              filtered.map((item, i) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={item.action}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                    i === selectedIdx ? "bg-brand/10 text-brand" : "text-foreground hover:bg-surface"
+                  }`}
+                >
+                  {item.type === "process" ? (
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold bg-brand/10 text-brand uppercase">{item.label.charAt(0)}</span>
+                  ) : (
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs bg-surface border border-border">→</span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{item.desc}</p>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">No results found</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

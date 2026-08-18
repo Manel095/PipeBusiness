@@ -1,230 +1,214 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useWorkspace } from "@/lib/store"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { TrendingUp, TrendingDown, AlertCircle, Activity, ArrowRight } from "lucide-react"
-
-const TIME_RANGES = [
-  { key: "7d", label: "7 days", days: 7 },
-  { key: "30d", label: "30 days", days: 30 },
-  { key: "90d", label: "90 days", days: 90 },
-]
+import { useWorkspace, actions, type Report } from "@/lib/store"
+import { Plus, FileText, Download, Trash2, Clock, Save, Copy } from "lucide-react"
 
 export default function IntelligencePage() {
   const workspace = useWorkspace()
-  const [timeRange, setTimeRange] = useState("30d")
-  const days = TIME_RANGES.find((t) => t.key === timeRange)?.days ?? 30
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [editTitle, setEditTitle] = useState("")
 
-  // 1. Calculate Conversion Rates based on Connections
-  const conversions = useMemo(() => {
-    return workspace.connections.map(conn => {
-      const fromProc = workspace.processes.find(p => p.id === conn.from)
-      const toProc = workspace.processes.find(p => p.id === conn.to)
-      
-      if (!fromProc || !toProc || fromProc.data.length === 0 || toProc.data.length === 0) return null
+  const reports = workspace.reports ?? []
+  const selectedReport = reports.find(r => r.id === selectedReportId)
 
-      // Get data for the selected time range
-      const fromData = fromProc.data.slice(-days)
-      const toData = toProc.data.slice(-days)
+  // Generate a snapshot report
+  const generateSnapshot = () => {
+    const now = new Date()
+    const lines: string[] = [
+      `# Business Snapshot — ${now.toLocaleDateString()}`,
+      "",
+      `> Generated on ${now.toLocaleString()}`,
+      "",
+      "---",
+      "",
+    ]
 
-      // Naive primary metric selection (first non-date key)
-      const fromMetric = Object.keys(fromData[0]).find(k => k !== "date") || ""
-      const toMetric = Object.keys(toData[0]).find(k => k !== "date") || ""
+    for (const proc of workspace.processes) {
+      lines.push(`## ${proc.name}`)
+      lines.push("")
+      lines.push(`**Engine Type:** ${proc.config?.engineType ?? "custom"} | **Entity:** ${proc.config?.entityType ?? "N/A"} | **Status:** ${proc.status}`)
+      lines.push("")
 
-      // Sum volumes
-      const fromTotal = fromData.reduce((acc, row) => acc + Number(row[fromMetric] || 0), 0)
-      const toTotal = toData.reduce((acc, row) => acc + Number(row[toMetric] || 0), 0)
+      // KPIs
+      if (proc.config?.kpis && proc.data.length > 0) {
+        const lastRow = proc.data[proc.data.length - 1]
+        const prevRow = proc.data.length > 7 ? proc.data[proc.data.length - 8] : proc.data[0]
 
-      const conversionRate = fromTotal > 0 ? (toTotal / fromTotal) * 100 : 0
-      
-      // Dynamic threshold: If conversion is < 15%, flag as bottleneck
-      const isBottleneck = conversionRate < 15 && fromTotal > 0
+        lines.push("| KPI | Current | 7d Ago | Trend |")
+        lines.push("|-----|---------|--------|-------|")
 
-      return {
-        id: conn.id,
-        fromProc,
-        toProc,
-        fromMetric,
-        toMetric,
-        fromTotal,
-        toTotal,
-        conversionRate,
-        isBottleneck
+        for (const kpi of proc.config.kpis) {
+          const curr = Number(lastRow[kpi.field] ?? 0)
+          const prev = Number(prevRow[kpi.field] ?? curr)
+          const delta = prev !== 0 ? ((curr - prev) / prev * 100).toFixed(1) : "0.0"
+          const trend = Number(delta) >= 0 ? `↑ +${delta}%` : `↓ ${delta}%`
+          const fmt = kpi.unit === "currency" ? `$${curr.toLocaleString()}` : kpi.unit === "percentage" ? `${curr}%` : curr.toLocaleString()
+          const fmtPrev = kpi.unit === "currency" ? `$${prev.toLocaleString()}` : kpi.unit === "percentage" ? `${prev}%` : prev.toLocaleString()
+          lines.push(`| ${kpi.name} | **${fmt}** | ${fmtPrev} | ${trend} |`)
+        }
+        lines.push("")
       }
-    }).filter(Boolean) as any[]
-  }, [workspace.connections, workspace.processes, days])
 
-  // 2. Aggregate Entity Flow Trends (Primary charts)
-  const charts = useMemo(() => {
-    return workspace.processes.map(proc => {
-      if (proc.data.length === 0) return null
-      const sliced = proc.data.slice(-days)
-      const primaryMetric = Object.keys(sliced[0]).find(k => k !== "date") || ""
-      
-      // Calculate delta
-      const latest = Number(sliced[sliced.length - 1]?.[primaryMetric] ?? 0)
-      const prev = Number(sliced[0]?.[primaryMetric] ?? latest)
-      const delta = prev !== 0 ? ((latest - prev) / prev) * 100 : 0
+      // Incoming data
+      if ((proc.incomingData?.length ?? 0) > 0) {
+        lines.push(`**Incoming data:** ${proc.incomingData.length} records received from connectors`)
+        lines.push("")
+      }
 
-      return { proc, primaryMetric, data: sliced, latest, delta }
-    }).filter(Boolean) as any[]
-  }, [workspace.processes, days])
+      // Connectors out
+      const outConns = workspace.connectors.filter(c => c.from === proc.id)
+      if (outConns.length > 0) {
+        const targets = outConns.map(c => {
+          const target = workspace.processes.find(p => p.id === c.to)
+          return `${c.name} → ${target?.name ?? "?"}`
+        }).join(", ")
+        lines.push(`**Connectors out:** ${targets}`)
+        lines.push("")
+      }
+
+      lines.push("---")
+      lines.push("")
+    }
+
+    const content = lines.join("\n")
+    const id = `report-${Date.now()}`
+    const title = `Business Snapshot — ${now.toLocaleDateString()}`
+    actions.addReport({ id, title, content, createdAt: Date.now(), updatedAt: Date.now(), isTemplate: false })
+    setSelectedReportId(id)
+    setEditContent(content)
+    setEditTitle(title)
+  }
+
+  const selectReport = (r: Report) => {
+    setSelectedReportId(r.id)
+    setEditContent(r.content)
+    setEditTitle(r.title)
+  }
+
+  const saveReport = () => {
+    if (!selectedReportId) return
+    actions.updateReport(selectedReportId, { title: editTitle, content: editContent, updatedAt: Date.now() })
+  }
+
+  const exportMarkdown = () => {
+    const blob = new Blob([editContent], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${editTitle.replace(/[^a-zA-Z0-9]/g, "_")}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
-    <div className="h-full overflow-y-auto bg-surface/30">
-      {/* Header */}
-      <div className="border-b border-border bg-background px-8 py-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Business Intelligence</h1>
-          <p className="mt-2 text-muted-foreground">
-            Dynamic bottleneck analysis and entity flow across your connected processes.
-          </p>
+    <div className="h-full flex">
+      {/* Sidebar — Reports list */}
+      <div className="w-72 border-r border-border bg-surface/50 flex flex-col h-full">
+        <div className="px-4 py-4 border-b border-border">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Reports</h2>
         </div>
-        <div className="flex gap-1 rounded-full border border-border bg-surface p-1">
-          {TIME_RANGES.map((t) => (
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {reports.length === 0 && (
+            <p className="text-xs text-muted-foreground px-3 py-6 text-center">No reports yet. Generate a snapshot to get started.</p>
+          )}
+          {reports.map(r => (
             <button
-              key={t.key}
+              key={r.id}
               type="button"
-              onClick={() => setTimeRange(t.key)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                timeRange === t.key
-                  ? "bg-brand text-brand-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background"
+              onClick={() => selectReport(r)}
+              className={`w-full text-left rounded-xl px-3 py-2.5 transition-colors ${
+                selectedReportId === r.id ? "bg-brand/10 text-brand" : "text-foreground hover:bg-background"
               }`}
             >
-              {t.label}
+              <div className="flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-sm font-medium truncate">{r.title}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                {new Date(r.updatedAt).toLocaleDateString()}
+                {r.isTemplate && <span className="bg-brand/10 text-brand px-1.5 py-0.5 rounded text-[9px] font-bold">TEMPLATE</span>}
+              </div>
             </button>
           ))}
         </div>
+
+        <div className="border-t border-border p-3 space-y-2">
+          <button
+            type="button"
+            onClick={generateSnapshot}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Generate Snapshot
+          </button>
+        </div>
       </div>
 
-      <div className="p-8 max-w-7xl mx-auto space-y-10">
-
-        {/* Conversion Analysis Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="w-5 h-5 text-brand" />
-            <h2 className="text-xl font-bold">Conversion Analysis</h2>
-          </div>
-          
-          {conversions.length === 0 ? (
-            <div className="border border-dashed border-border rounded-xl p-10 text-center bg-background">
-              <p className="text-muted-foreground">Connect processes in the workspace to see conversion bottlenecks.</p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {conversions.map(conv => (
-                <div key={conv.id} className={`rounded-2xl border bg-background p-6 shadow-sm transition-shadow hover:shadow-md ${conv.isBottleneck ? 'border-red-500/30' : 'border-border'}`}>
-                  
-                  {/* Nodes header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-lg shadow-sm">
-                        {conv.fromProc.icon}
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-lg shadow-sm">
-                        {conv.toProc.icon}
-                      </div>
-                    </div>
-                    {conv.isBottleneck ? (
-                      <span className="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-500/10 px-2.5 py-1 rounded-full">
-                        <AlertCircle className="w-3.5 h-3.5" /> Bottleneck
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-                        <TrendingUp className="w-3.5 h-3.5" /> Healthy
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Flow Data */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground capitalize">{conv.fromMetric.replace(/_/g, " ")} (In)</span>
-                      <span className="font-bold">{conv.fromTotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground capitalize">{conv.toMetric.replace(/_/g, " ")} (Out)</span>
-                      <span className="font-bold">{conv.toTotal.toLocaleString()}</span>
-                    </div>
-                    
-                    <div className="pt-4 border-t border-border flex justify-between items-center">
-                      <span className="text-sm font-semibold">Conversion Rate</span>
-                      <span className={`text-2xl font-extrabold ${conv.isBottleneck ? 'text-red-500' : 'text-emerald-600'}`}>
-                        {conv.conversionRate.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Entity Flow Trends */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-brand" />
-            <h2 className="text-xl font-bold">Entity Flow Trends</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {charts.map(chart => (
-              <div key={chart.proc.id} className="rounded-2xl border border-border bg-background p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface border border-border text-xl">
-                      {chart.proc.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-bold">{chart.proc.name}</h3>
-                      <p className="text-xs text-muted-foreground capitalize tracking-wide">{chart.primaryMetric.replace(/_/g, " ")}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-extrabold">{chart.latest.toLocaleString()}</div>
-                    <div className={`text-xs font-bold flex items-center justify-end gap-1 ${chart.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {chart.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      {Math.abs(chart.delta).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-48 w-full mt-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chart.data} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id={`gradient-${chart.proc.id}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chart.proc.color} stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor={chart.proc.color} stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
-                      <XAxis dataKey="date" hide />
-                      <YAxis hide domain={['dataMin', 'dataMax']} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--background)' }}
-                        itemStyle={{ color: 'var(--foreground)', fontWeight: 'bold' }}
-                        labelStyle={{ color: 'var(--muted-foreground)', marginBottom: '4px' }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey={chart.primaryMetric} 
-                        stroke={chart.proc.color} 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill={`url(#gradient-${chart.proc.id})`} 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+      {/* Main — Editor */}
+      <div className="flex-1 flex flex-col h-full bg-background">
+        {selectedReport ? (
+          <>
+            {/* Editor Header */}
+            <div className="flex items-center justify-between border-b border-border px-6 py-3">
+              <input
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                className="text-lg font-bold bg-transparent outline-none flex-1 mr-4"
+                placeholder="Report title..."
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={saveReport} className="flex items-center gap-1.5 text-xs font-semibold bg-surface border border-border rounded-lg px-3 py-1.5 hover:border-brand/30 transition-colors">
+                  <Save className="w-3 h-3" /> Save
+                </button>
+                <button onClick={exportMarkdown} className="flex items-center gap-1.5 text-xs font-semibold bg-surface border border-border rounded-lg px-3 py-1.5 hover:border-brand/30 transition-colors">
+                  <Download className="w-3 h-3" /> Export .md
+                </button>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(editContent) }}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-surface border border-border rounded-lg px-3 py-1.5 hover:border-brand/30 transition-colors"
+                >
+                  <Copy className="w-3 h-3" /> Copy
+                </button>
+                <button
+                  onClick={() => { actions.removeReport(selectedReportId!); setSelectedReportId(null) }}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-1.5 hover:bg-destructive/10 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
 
+            {/* Editor Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <textarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                className="w-full h-full min-h-[500px] bg-transparent outline-none text-sm font-mono leading-relaxed resize-none"
+                placeholder="Write your report in Markdown..."
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+            <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
+            <h2 className="text-xl font-bold text-foreground">Intelligence Reports</h2>
+            <p className="mt-2 text-muted-foreground max-w-md">
+              Generate business snapshots that pull live KPIs from your engines. Export as <code className="font-mono text-brand">.md</code> files to share with your team.
+            </p>
+            <button
+              type="button"
+              onClick={generateSnapshot}
+              className="mt-6 flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-bold text-white hover:bg-brand/90 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Generate Your First Snapshot
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

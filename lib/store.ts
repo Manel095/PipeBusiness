@@ -12,7 +12,7 @@ export type DataSource = {
   type: DataSourceType
   name: string
   config: Record<string, string>
-  entityType?: "client" | "project" | "task" | "sale"
+  entityType?: "client" | "project" | "task" | "sale" | "transaction"
   createdAt: number
 }
 
@@ -24,36 +24,78 @@ export type ProcessStep = {
   status: "pending" | "in_progress" | "completed"
 }
 
+/* ─── Engine Configuration ─── */
+export type EngineType = "cash" | "projects" | "billing" | "leads" | "custom"
+
+export type SchemaField = {
+  key: string
+  label: string
+  type: "string" | "number" | "date" | "currency" | "boolean"
+}
+
+export type KPIDefinition = {
+  id: string
+  name: string
+  field: string
+  unit: "currency" | "percentage" | "count" | "time"
+  direction: "up" | "down"
+}
+
+export type EngineConfig = {
+  engineType: EngineType
+  inputSchema: SchemaField[]
+  kpis: KPIDefinition[]
+  entityType: "client" | "project" | "task" | "sale" | "transaction"
+}
+
+/* ─── Process (Engine) Node ─── */
 export type ProcessNode = {
   id: string
   name: string
-  icon: string
   description: string
   position: Position
   color: string
   dataSources: DataSource[]
   data: DataRow[]
+  incomingData: DataRow[]
+  config: EngineConfig
   steps?: ProcessStep[]
   status: "active" | "draft" | "paused"
 }
 
-export type Connection = {
+/* ─── Connector (replaces Connection) ─── */
+export type Connector = {
   id: string
+  name: string
   from: string
   to: string
-  label?: string
+  dataFlowFields: string[]
   schemaMapping?: Record<string, string>
 }
 
+/* ─── Reports ─── */
+export type Report = {
+  id: string
+  title: string
+  content: string
+  engineId?: string
+  createdAt: number
+  updatedAt: number
+  isTemplate: boolean
+  schedule?: "daily" | "weekly" | "monthly" | null
+}
+
+/* ─── Workspace State ─── */
 export type WorkspaceState = {
   processes: ProcessNode[]
-  connections: Connection[]
+  connectors: Connector[]
+  reports: Report[]
   selectedProcessId: string | null
-  selectedConnectionId: string | null
+  selectedConnectorId: string | null
   showProcessDetail: boolean
   showDataImport: boolean
   showCommandPalette: boolean
-  showConnectionMappingId: string | null
+  showConnectorModalId: string | null
   canvasOffset: Position
   canvasZoom: number
 }
@@ -61,13 +103,14 @@ export type WorkspaceState = {
 /* ─── initial state ─── */
 const INITIAL: WorkspaceState = {
   processes: [],
-  connections: [],
+  connectors: [],
+  reports: [],
   selectedProcessId: null,
-  selectedConnectionId: null,
+  selectedConnectorId: null,
   showProcessDetail: false,
   showDataImport: false,
   showCommandPalette: false,
-  showConnectionMappingId: null,
+  showConnectorModalId: null,
   canvasOffset: { x: 0, y: 0 },
   canvasZoom: 1,
 }
@@ -78,11 +121,11 @@ const listeners = new Set<() => void>()
 
 function emit() {
   listeners.forEach((l) => l())
-  // Persist to localStorage (debounced would be better in prod)
   try {
     const serializable = {
       processes: state.processes,
-      connections: state.connections,
+      connectors: state.connectors,
+      reports: state.reports,
     }
     localStorage.setItem("pb-workspace", JSON.stringify(serializable))
   } catch {}
@@ -98,12 +141,17 @@ function loadFromStorage(): Partial<WorkspaceState> {
 
 /* ─── actions ─── */
 export const actions = {
-  init(seed?: { processes: ProcessNode[]; connections: Connection[] }) {
+  init(seed?: { processes: ProcessNode[]; connectors: Connector[] }) {
     const stored = loadFromStorage()
     if (stored.processes && stored.processes.length > 0) {
-      state = { ...state, processes: stored.processes, connections: stored.connections ?? [] }
+      state = {
+        ...state,
+        processes: stored.processes,
+        connectors: (stored as any).connectors ?? (stored as any).connections ?? [],
+        reports: (stored as any).reports ?? [],
+      }
     } else if (seed) {
-      state = { ...state, processes: seed.processes, connections: seed.connections }
+      state = { ...state, processes: seed.processes, connectors: seed.connectors }
     }
     emit()
   },
@@ -139,7 +187,7 @@ export const actions = {
     state = {
       ...state,
       processes: state.processes.filter((p) => p.id !== id),
-      connections: state.connections.filter((c) => c.from !== id && c.to !== id),
+      connectors: state.connectors.filter((c) => c.from !== id && c.to !== id),
       selectedProcessId: state.selectedProcessId === id ? null : state.selectedProcessId,
       showProcessDetail: state.selectedProcessId === id ? false : state.showProcessDetail,
     }
@@ -154,26 +202,46 @@ export const actions = {
     emit()
   },
 
-  addConnection(conn: Connection) {
-    // Prevent duplicates
-    const exists = state.connections.some((c) => c.from === conn.from && c.to === conn.to)
-    if (exists) return
-    state = { ...state, connections: [...state.connections, conn] }
+  /* ─── Connectors ─── */
+  addConnector(conn: Connector) {
+    state = { ...state, connectors: [...state.connectors, conn] }
     emit()
   },
 
-  removeConnection(id: string) {
+  removeConnector(id: string) {
     state = {
       ...state,
-      connections: state.connections.filter((c) => c.id !== id),
+      connectors: state.connectors.filter((c) => c.id !== id),
     }
     emit()
   },
 
-  updateConnection(id: string, patch: Partial<Connection>) {
+  updateConnector(id: string, patch: Partial<Connector>) {
     state = {
       ...state,
-      connections: state.connections.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      connectors: state.connectors.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }
+    emit()
+  },
+
+  /* ─── Reports ─── */
+  addReport(report: Report) {
+    state = { ...state, reports: [...state.reports, report] }
+    emit()
+  },
+
+  updateReport(id: string, patch: Partial<Report>) {
+    state = {
+      ...state,
+      reports: state.reports.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    }
+    emit()
+  },
+
+  removeReport(id: string) {
+    state = {
+      ...state,
+      reports: state.reports.filter((r) => r.id !== id),
     }
     emit()
   },
@@ -198,8 +266,8 @@ export const actions = {
     emit()
   },
 
-  openConnectionMapping(id: string | null) {
-    state = { ...state, showConnectionMappingId: id }
+  openConnectorModal(id: string | null) {
+    state = { ...state, showConnectorModalId: id }
     emit()
   },
 
@@ -235,9 +303,18 @@ export const actions = {
     emit()
   },
 
+  addIncomingData(processId: string, rows: DataRow[]) {
+    state = {
+      ...state,
+      processes: state.processes.map((p) =>
+        p.id === processId ? { ...p, incomingData: [...(p.incomingData || []), ...rows] } : p
+      ),
+    }
+    emit()
+  },
+
   setCanvasOffset(offset: Position) {
     state = { ...state, canvasOffset: offset }
-    // Don't persist canvas position
     listeners.forEach((l) => l())
   },
 

@@ -1,51 +1,63 @@
-import { Terminal, Webhook } from "lucide-react"
+import { Terminal, ArrowRight } from "lucide-react"
+
+const COMMANDS = [
+  { cmd: '/create Marketing webhook https://api.ads.com/hook', desc: 'Create a Lead Engine with a webhook', delay: 0 },
+  { cmd: '/create Sales api https://crm.io/deals', desc: 'Create a Cash Engine with CRM API', delay: 1 },
+  { cmd: '/connect Marketing Sales "Lead Handoff"', desc: 'Pipe leads from Marketing to Sales', delay: 2 },
+  { cmd: '/report Sales monthly', desc: 'Generate a monthly snapshot', delay: 3 },
+]
 
 export function Integrations() {
   return (
-    <section id="integrations" className="py-24 bg-background">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          
-          {/* Left Side: Command Bar Visual */}
-          <div className="order-2 md:order-1 relative rounded-2xl border border-border bg-surface p-6 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 mb-4 border-b border-border pb-4">
+    <section id="integrations" className="mx-auto max-w-6xl px-5 py-24 md:py-32">
+      <div className="grid md:grid-cols-2 gap-16 items-center">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-brand">Command-Driven</span>
+          <h2 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Build your business OS from the command bar
+          </h2>
+          <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
+            No more clicking through menus. Press <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 text-xs font-mono">⌘K</kbd> and
+            type commands to create engines, wire connectors, add webhooks, and generate intelligence reports — all in seconds.
+          </p>
+          <div className="mt-8 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
               <Terminal className="w-5 h-5 text-brand" />
-              <div className="text-sm font-mono text-muted-foreground">Command Line Interface</div>
             </div>
-            
-            <div className="space-y-4">
-              <div className="bg-background border border-brand/50 rounded-lg p-3 flex items-center gap-2 shadow-sm">
-                <span className="text-brand font-mono font-bold">/</span>
-                <span className="text-foreground font-mono">revenue-q3 --filter=won</span>
-                <span className="ml-auto w-1.5 h-4 bg-brand animate-pulse"></span>
-              </div>
-              
-              <div className="pl-4 border-l-2 border-brand/20 py-2">
-                <div className="text-sm text-muted-foreground mb-1">Instant Result</div>
-                <div className="text-2xl font-extrabold text-foreground">$428,500.00</div>
-                <div className="text-xs text-emerald-600 font-semibold mt-1">+14% vs Q2</div>
-              </div>
+            <div>
+              <p className="text-sm font-bold">5 core commands</p>
+              <p className="text-xs text-muted-foreground">/create · /connect · /update · /report · /status</p>
             </div>
           </div>
+        </div>
 
-          {/* Right Side: Text Content */}
-          <div className="order-1 md:order-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-muted-foreground shadow-sm mb-6">
-              <Webhook className="w-4 h-4 text-brand" />
-              Universal Connectivity
+        {/* CLI Visual */}
+        <div className="rounded-2xl border border-border bg-foreground/[0.03] p-1">
+          <div className="rounded-xl bg-background border border-border overflow-hidden">
+            {/* Terminal header */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+              <span className="ml-3 text-xs text-muted-foreground font-mono">PipeBusiness CLI</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-6">
-              Connect to everything. <br/>
-              <span className="text-muted-foreground">Control it from anywhere.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-              PipeBusiness ingest data from any tool using universal Webhooks and native API listeners. Simply point your ClickUp "Task Closed" events to a node, and watch the pipeline flow automatically.
-            </p>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Prefer keyboard over mouse? Our blazing-fast <strong>Command Bar</strong> lets you query any metric, trace any entity, and execute workflows instantly. Just type <code className="bg-surface border border-border px-1.5 py-0.5 rounded text-sm text-foreground">/revenue-q3</code>.
-            </p>
-          </div>
 
+            {/* Commands */}
+            <div className="p-4 space-y-4 font-mono text-sm">
+              {COMMANDS.map((c, i) => (
+                <div key={i}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-brand font-bold select-none">$</span>
+                    <code className="text-foreground">{c.cmd}</code>
+                  </div>
+                  <div className="ml-4 mt-1 flex items-center gap-1.5 text-emerald-500 text-xs">
+                    <span>✓</span>
+                    <span>{c.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react"
 import { actions, type ProcessNode as ProcessNodeType } from "@/lib/store"
+import { ENGINE_TYPE_LABELS } from "@/lib/demo-data"
+import { ArrowDownLeft } from "lucide-react"
 
 interface ProcessNodeProps {
   process: ProcessNodeType
@@ -9,9 +11,10 @@ interface ProcessNodeProps {
   onStartConnection: (fromId: string, portPos: { x: number; y: number }) => void
   onEndConnection: (toId: string) => void
   isConnecting: boolean
+  connectorCount: number
 }
 
-export function ProcessNode({ process, selected, onStartConnection, onEndConnection, isConnecting }: ProcessNodeProps) {
+export function ProcessNode({ process, selected, onStartConnection, onEndConnection, isConnecting, connectorCount }: ProcessNodeProps) {
   const nodeRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -67,11 +70,11 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
     }
   }, [process.id, isConnecting, onEndConnection])
 
-  // Get latest data metrics
-  const latestData = process.data.length > 0 ? process.data[process.data.length - 1] : null
-  const metricEntries = latestData
-    ? Object.entries(latestData).filter(([k]) => k !== "date").slice(0, 2)
-    : []
+  const engineLabel = process.config?.engineType
+    ? ENGINE_TYPE_LABELS[process.config.engineType] ?? "Engine"
+    : "Engine"
+
+  const hasIncoming = (process.incomingData?.length ?? 0) > 0
 
   return (
     <div
@@ -83,11 +86,12 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
     >
       <div className="process-node-card">
         <div className="process-node-header">
+          {/* Letter Avatar instead of emoji */}
           <div
             className="process-node-icon"
-            style={{ background: `${process.color}15` }}
+            style={{ background: `${process.color}15`, color: process.color, fontWeight: 800, fontSize: "16px", textTransform: "uppercase" }}
           >
-            {process.icon}
+            {process.name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{process.name}</p>
@@ -96,45 +100,41 @@ export function ProcessNode({ process, selected, onStartConnection, onEndConnect
                 className="inline-block h-1.5 w-1.5 rounded-full"
                 style={{ background: process.status === "active" ? "#10b981" : process.status === "paused" ? "#f59e0b" : "#94a3b8" }}
               />
-              {process.status === "active" ? "Active" : process.status === "paused" ? "Paused" : "Draft"}
-              {process.dataSources.length > 0 && (
-                <span className="text-muted-foreground"> · {process.dataSources.length} source{process.dataSources.length > 1 ? "s" : ""}</span>
+              {engineLabel}
+              {connectorCount > 0 && (
+                <span className="text-muted-foreground"> · {connectorCount} connector{connectorCount > 1 ? "s" : ""}</span>
               )}
             </p>
           </div>
         </div>
-        {metricEntries.length > 0 && (
+
+        {/* KPI Summary (from config) — show top 2 KPIs */}
+        {process.config?.kpis && process.config.kpis.length > 0 && process.data.length > 0 && (
           <div className="process-node-body">
-            {metricEntries.map(([key, val]) => (
-              <div key={key} className="process-node-metric">
-                <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
-                <span className="font-semibold text-foreground">{typeof val === "number" ? val.toLocaleString() : val}</span>
-              </div>
-            ))}
+            {process.config.kpis.slice(0, 2).map((kpi) => {
+              const lastRow = process.data[process.data.length - 1]
+              const val = lastRow?.[kpi.field]
+              if (val === undefined) return null
+              return (
+                <div key={kpi.id} className="process-node-metric">
+                  <span className="text-muted-foreground">{kpi.name}</span>
+                  <span className="font-semibold text-foreground">
+                    {kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` :
+                     kpi.unit === "percentage" ? `${val}%` :
+                     Number(val).toLocaleString()}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         )}
 
-        {/* Nested Steps Visualization */}
-        {process.steps && process.steps.length > 0 && (
-          <div className="px-3 pb-3">
-            <div className="mt-2 pt-2 border-t border-border flex flex-col gap-2">
-              {process.steps.map((step, idx) => (
-                <div key={step.id} className="flex items-center gap-2 relative">
-                  {/* Step Connector Line */}
-                  {idx !== process.steps!.length - 1 && (
-                    <div className="absolute left-[5px] top-[14px] w-[2px] h-[14px] bg-border" />
-                  )}
-                  {/* Status Dot */}
-                  <div className={`w-3 h-3 rounded-full border-[2px] z-10 flex-shrink-0 ${
-                    step.status === "completed" ? "bg-emerald-500 border-emerald-500" :
-                    step.status === "in_progress" ? "bg-brand border-brand" :
-                    "bg-transparent border-muted-foreground/50"
-                  }`} />
-                  <span className={`text-[11px] truncate ${step.status === "pending" ? "text-muted-foreground" : "text-foreground font-medium"}`}>
-                    {step.name}
-                  </span>
-                </div>
-              ))}
+        {/* Incoming data indicator */}
+        {hasIncoming && (
+          <div className="px-3 pb-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-blue-600 bg-blue-500/10 rounded-full px-2 py-0.5 w-fit">
+              <ArrowDownLeft className="w-3 h-3" />
+              {process.incomingData.length} received
             </div>
           </div>
         )}

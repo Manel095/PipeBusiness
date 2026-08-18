@@ -25,7 +25,6 @@ export function Canvas() {
     if (e.target === containerRef.current || (e.target as HTMLElement).closest(".canvas-grid")) {
       setIsPanning(true)
       setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y })
-      // Deselect when clicking on canvas
       actions.selectProcess(null)
     }
   }, [offset])
@@ -54,17 +53,22 @@ export function Canvas() {
     setConnecting({ fromId, fromPos: portPos })
   }, [])
 
-  // Connection end
+  // Connection end — creates a Connector
   const endConnection = useCallback((toId: string) => {
     if (connecting && connecting.fromId !== toId) {
-      actions.addConnection({
+      const fromProc = workspace.processes.find(p => p.id === connecting.fromId)
+      const toProc = workspace.processes.find(p => p.id === toId)
+      const defaultName = fromProc && toProc ? `${fromProc.name} → ${toProc.name}` : "New Connector"
+      actions.addConnector({
         id: `conn-${Date.now()}`,
+        name: defaultName,
         from: connecting.fromId,
         to: toId,
+        dataFlowFields: [],
       })
     }
     setConnecting(null)
-  }, [connecting])
+  }, [connecting, workspace.processes])
 
   // Get node center position for connection lines
   const getNodeCenter = useCallback((proc: ProcessNodeType, side: "left" | "right") => {
@@ -75,6 +79,11 @@ export function Canvas() {
       y: proc.position.y + nodeH / 2,
     }
   }, [])
+
+  // Count connectors per process
+  const getConnectorCount = useCallback((procId: string) => {
+    return workspace.connectors.filter(c => c.from === procId || c.to === procId).length
+  }, [workspace.connectors])
 
   return (
     <>
@@ -101,12 +110,12 @@ export function Canvas() {
             <rect width="20000" height="20000" fill="url(#canvas-dots)" />
           </svg>
 
-          {/* Connection lines */}
+          {/* Connector lines */}
           <svg
             style={{ position: "absolute", inset: "-10000px", width: "20000px", height: "20000px", pointerEvents: "none", zIndex: 1 }}
           >
             <g transform="translate(10000, 10000)">
-              {workspace.connections.map((conn) => {
+              {workspace.connectors.map((conn) => {
                 const fromNode = workspace.processes.find((p) => p.id === conn.from)
                 const toNode = workspace.processes.find((p) => p.id === conn.to)
                 if (!fromNode || !toNode) return null
@@ -118,8 +127,8 @@ export function Canvas() {
                     id={conn.id}
                     from={from}
                     to={to}
-                    label={conn.label}
-                    selected={workspace.selectedConnectionId === conn.id}
+                    label={conn.name}
+                    selected={workspace.selectedConnectorId === conn.id}
                   />
                 )
               })}
@@ -144,6 +153,7 @@ export function Canvas() {
               onStartConnection={startConnection}
               onEndConnection={endConnection}
               isConnecting={connecting !== null}
+              connectorCount={getConnectorCount(proc.id)}
             />
           ))}
         </div>
@@ -153,20 +163,26 @@ export function Canvas() {
           <button
             type="button"
             className="hero-toolbar-btn hero-toolbar-btn-active"
-            title="Add process"
+            title="Add engine"
             onClick={() => {
               const id = `proc-${Date.now()}`
               const cx = (-offset.x + (containerRef.current?.clientWidth ?? 600) / 2) / zoom
               const cy = (-offset.y + (containerRef.current?.clientHeight ?? 400) / 2) / zoom
               actions.addProcess({
                 id,
-                name: "New Process",
-                icon: "📌",
+                name: "New Engine",
                 description: "",
                 position: { x: cx - 110, y: cy - 50 },
                 color: "#FF0083",
                 dataSources: [],
                 data: [],
+                incomingData: [],
+                config: {
+                  engineType: "custom",
+                  inputSchema: [],
+                  kpis: [],
+                  entityType: "client",
+                },
                 status: "draft",
               })
             }}
@@ -203,7 +219,7 @@ export function Canvas() {
                 opacity={0.6}
               />
             ))}
-            {workspace.connections.map((conn) => {
+            {workspace.connectors.map((conn) => {
               const f = workspace.processes.find((p) => p.id === conn.from)
               const t = workspace.processes.find((p) => p.id === conn.to)
               if (!f || !t) return null
@@ -233,9 +249,9 @@ export function Canvas() {
         <DataImportModal processId={workspace.selectedProcessId} />
       )}
 
-      {/* Connection Mapping Modal */}
-      {workspace.showConnectionMappingId && (
-        <ConnectionModal connectionId={workspace.showConnectionMappingId} />
+      {/* Connector Modal */}
+      {workspace.showConnectorModalId && (
+        <ConnectionModal connectionId={workspace.showConnectorModalId} />
       )}
     </>
   )

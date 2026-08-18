@@ -20,7 +20,7 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    actions.openConnectionMapping(id)
+    actions.openConnectorModal(id)
   }
 
   return (
@@ -33,10 +33,7 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
           stroke="transparent"
           strokeWidth={16}
           style={{ cursor: "pointer", pointerEvents: "stroke" }}
-          onClick={(e) => {
-            e.stopPropagation()
-            actions.openConnectionMapping(id)
-          }}
+          onClick={handleClick}
         />
       )}
 
@@ -68,9 +65,9 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
       {label && !preview && (
         <g transform={`translate(${labelX}, ${labelY - 10})`} onClick={handleClick} className="cursor-pointer">
           <rect
-            x={-30}
+            x={-(Math.min(label.length * 4 + 16, 90))}
             y={-12}
-            width={60}
+            width={Math.min(label.length * 8 + 32, 180)}
             height={24}
             fill="var(--surface)"
             rx={12}
@@ -98,7 +95,7 @@ export function ConnectionLine({ id, from, to, label, selected, preview }: Conne
           style={{ cursor: "pointer", pointerEvents: "all" }}
           onClick={(e) => {
             e.stopPropagation()
-            actions.removeConnection(id)
+            actions.removeConnector(id)
           }}
         >
           <circle r="10" fill="var(--destructive)" />

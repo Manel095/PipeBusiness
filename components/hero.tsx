@@ -130,12 +130,12 @@ export function Hero() {
                 className="relative w-64 rounded-2xl border border-border bg-background p-5 shadow-2xl shadow-brand/10 backdrop-blur-md"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center text-xl">
-                    📣
+                  <div className="w-10 h-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center text-sm font-extrabold uppercase">
+                    M
                   </div>
                   <div>
                     <h3 className="font-bold text-sm">Marketing</h3>
-                    <p className="text-xs text-muted-foreground">Lead Capture</p>
+                    <p className="text-xs text-muted-foreground">Lead Engine</p>
                   </div>
                 </div>
                 
@@ -191,12 +191,12 @@ export function Hero() {
                 className="relative w-64 rounded-2xl border border-border bg-background p-5 shadow-2xl shadow-blue-500/10 backdrop-blur-md"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl">
-                    🤝
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-extrabold uppercase">
+                    S
                   </div>
                   <div>
                     <h3 className="font-bold text-sm">Sales</h3>
-                    <p className="text-xs text-muted-foreground">Deal Engine</p>
+                    <p className="text-xs text-muted-foreground">Cash Engine</p>
                   </div>
                 </div>
 

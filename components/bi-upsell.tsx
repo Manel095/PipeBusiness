@@ -1,64 +1,79 @@
-import { BarChart3, TrendingUp, AlertCircle } from "lucide-react"
+import { FileText, Download, Clock, ArrowRight } from "lucide-react"
 
 export function BiUpsell() {
   return (
-    <section className="py-24 bg-surface border-y border-border overflow-hidden relative">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-      
-      <div className="mx-auto max-w-6xl px-5 relative z-10 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full bg-brand/10 text-brand px-4 py-1.5 text-sm font-bold shadow-sm mb-8">
-          <BarChart3 className="w-4 h-4" />
-          Pro Feature
-        </span>
-        
-        <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground mb-6">
-          Find bottlenecks instantly with <br/>
-          <span className="text-brand">Business Intelligence</span>
-        </h2>
-        
-        <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-12">
-          Stop guessing where you're losing money. The Business Intelligence panel measures conversion rates between every single node in your visual workflow, highlighting inefficiencies in bright red.
-        </p>
-
-        {/* Mock BI Interface */}
-        <div className="max-w-4xl mx-auto bg-background rounded-2xl border border-border shadow-xl p-6 md:p-8 flex flex-col md:flex-row gap-8 text-left relative overflow-hidden group">
-          <div className="flex-1 space-y-6">
-            <h3 className="font-bold text-lg border-b border-border pb-4">Conversion Analysis</h3>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 rounded-xl border border-border bg-surface">
-                <div>
-                  <div className="text-sm font-semibold">Marketing → Sales</div>
-                  <div className="text-xs text-muted-foreground mt-1">Lead to Deal conversion</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-emerald-600 flex items-center gap-1"><TrendingUp className="w-4 h-4"/> 14.2%</div>
-                  <div className="text-xs text-muted-foreground">Healthy</div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center p-4 rounded-xl border-2 border-red-500/20 bg-red-500/5">
-                <div>
-                  <div className="text-sm font-semibold flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500"/> Sales → Operations</div>
-                  <div className="text-xs text-red-500/70 mt-1">Deal to Project handover</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-red-600">3.8%</div>
-                  <div className="text-xs text-red-500 font-medium">Critical Bottleneck</div>
-                </div>
-              </div>
+    <section className="mx-auto max-w-6xl px-5 py-24 md:py-32">
+      <div className="grid md:grid-cols-2 gap-16 items-center">
+        {/* Report Visual */}
+        <div className="rounded-2xl border border-border bg-background p-6 shadow-xl shadow-brand/5">
+          {/* Mini report header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-brand" />
+              <span className="text-sm font-bold">Business Snapshot — Aug 2026</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button className="text-[10px] font-semibold bg-surface border border-border rounded px-2 py-1 flex items-center gap-1">
+                <Download className="w-3 h-3" /> .md
+              </button>
             </div>
           </div>
-          
-          <div className="flex-1 flex flex-col justify-center">
-            <h4 className="text-xl font-bold mb-4">Unlock actionable insights.</h4>
-            <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-              Our Pro plan includes full access to the BI engine. Identify exactly where your operations are stalling and optimize your conversion rates mathematically.
-            </p>
-            <a href="#pricing" className="inline-flex items-center justify-center w-full md:w-auto px-6 py-3 bg-foreground text-background font-bold rounded-full hover:bg-foreground/80 transition-colors">
-              Upgrade to Pro
-            </a>
+
+          {/* Mini report content */}
+          <div className="font-mono text-xs space-y-3 text-muted-foreground bg-surface rounded-xl p-4 border border-border">
+            <p className="text-foreground font-bold text-sm">## Marketing</p>
+            <p><span className="text-foreground">Engine Type:</span> leads | <span className="text-foreground">Entity:</span> client</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-1 text-foreground">KPI</th>
+                    <th className="text-left py-1 text-foreground">Current</th>
+                    <th className="text-left py-1 text-foreground">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border/50"><td className="py-1">Leads Captured</td><td className="font-bold text-foreground">68</td><td className="text-emerald-500">↑ +12.3%</td></tr>
+                  <tr className="border-b border-border/50"><td className="py-1">Cost per Lead</td><td className="font-bold text-foreground">$14.20</td><td className="text-emerald-500">↓ -8.1%</td></tr>
+                  <tr><td className="py-1">Ad Spend</td><td className="font-bold text-foreground">$1,042</td><td className="text-red-400">↑ +5.2%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-foreground font-bold text-sm mt-2">## Sales</p>
+            <p><span className="text-foreground">Connectors out:</span> Lead Handoff → Sales</p>
+            <p className="text-brand">...</p>
           </div>
+        </div>
+
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-brand">Intelligence</span>
+          <h2 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Generate business snapshots, not just dashboards
+          </h2>
+          <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
+            Stop staring at charts. Generate structured Markdown reports that pull live KPIs from every engine.
+            Export as <code className="font-mono text-brand">.md</code>, share with your team, or set up periodic templates.
+          </p>
+          <ul className="mt-6 space-y-3">
+            <li className="flex items-center gap-3 text-sm">
+              <FileText className="w-4 h-4 text-brand flex-shrink-0" />
+              <span>One-click business snapshots with KPI tables</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm">
+              <Download className="w-4 h-4 text-brand flex-shrink-0" />
+              <span>Export as .md files for stakeholder reports</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm">
+              <Clock className="w-4 h-4 text-brand flex-shrink-0" />
+              <span>Report templates with periodic scheduling</span>
+            </li>
+          </ul>
+          <a
+            href="/dashboard/intelligence"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[#D4006D] hover:shadow-lg"
+          >
+            Try Report Builder <ArrowRight className="h-4 w-4" />
+          </a>
         </div>
       </div>
     </section>
