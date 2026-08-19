@@ -1,11 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { Workflow, Menu, X } from "lucide-react"
+import { Workflow, Menu, X, ChevronDown } from "lucide-react"
+import { USE_CASES } from "@/components/use-cases/use-cases-data"
 
 const links = [
   { label: "Features", href: "/#features" },
-  { label: "Use Cases", href: "/use-cases" },
+  { 
+    label: "Use Cases", 
+    href: "/use-cases",
+    dropdown: USE_CASES.map(uc => ({ label: uc.badge, href: `/use-cases/${uc.id}` }))
+  },
   { label: "Integrations", href: "/#integrations" },
   { label: "Pricing", href: "/#pricing" },
   { label: "FAQ", href: "/#faq" },
@@ -26,14 +31,40 @@ export function SiteNav() {
 
         <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="group relative text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
-            >
-              {l.label}
+            <div key={l.href} className="group relative">
+              <a
+                href={l.href}
+                className="flex items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
+              >
+                {l.label}
+                {l.dropdown && <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />}
+              </a>
               <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-brand transition-all duration-100 ease-out group-hover:w-full"></span>
-            </a>
+              
+              {l.dropdown && (
+                <div className="absolute left-0 top-full hidden pt-4 group-hover:block w-[240px]">
+                  <div className="rounded-xl border border-border bg-white p-2 shadow-lg">
+                    {l.dropdown.map((dropLink) => (
+                      <a
+                        key={dropLink.href}
+                        href={dropLink.href}
+                        className="block rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+                      >
+                        {dropLink.label}
+                      </a>
+                    ))}
+                    <div className="mt-2 border-t border-border pt-2">
+                      <a
+                        href={l.href}
+                        className="block rounded-lg px-4 py-2 text-sm font-semibold text-brand hover:bg-secondary/50 transition-colors"
+                      >
+                        View all Use Cases &rarr;
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
@@ -66,14 +97,29 @@ export function SiteNav() {
         <div className="border-t border-border px-5 py-4 md:hidden bg-white">
           <div className="flex flex-col gap-4">
             {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="text-base font-medium text-foreground"
-              >
-                {l.label}
-              </a>
+              <div key={l.href} className="flex flex-col gap-2">
+                <a
+                  href={l.href}
+                  onClick={() => !l.dropdown && setOpen(false)}
+                  className="text-base font-medium text-foreground"
+                >
+                  {l.label}
+                </a>
+                {l.dropdown && (
+                  <div className="flex flex-col gap-2 pl-4 border-l-2 border-border/50 ml-2">
+                    {l.dropdown.map((dropLink) => (
+                      <a
+                        key={dropLink.href}
+                        href={dropLink.href}
+                        onClick={() => setOpen(false)}
+                        className="text-sm font-medium text-muted-foreground"
+                      >
+                        {dropLink.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
             <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
               <a

@@ -19,6 +19,9 @@ export type UseCase = {
   nodes: { label: string; sub: string }[]
   connectors: string[]
   kpis: { name: string; example: string }[]
+  steps: { title: string; description: string }[]
+  inputs: string[]
+  outputs: string[]
 }
 
 export const USE_CASES: UseCase[] = [
@@ -51,6 +54,24 @@ export const USE_CASES: UseCase[] = [
       { name: "Return Rate", example: "8.3%" },
       { name: "Net Contribution Margin", example: "24.1%" },
     ],
+    steps: [
+      { title: "Connect Ad Platforms", description: "Integrate Meta, Google, and TikTok ads to pipe in live spend and attribution data." },
+      { title: "Sync Storefront", description: "Link Shopify or WooCommerce to pull in orders, revenue, and customer profiles." },
+      { title: "Map Fulfillment", description: "Attach your WMS or 3PL to track shipping costs, packing times, and delivery status." },
+      { title: "Track Returns", description: "Monitor return authorizations and refunds to calculate true net margin." }
+    ],
+    inputs: [
+      "Ad spend data (Meta, Google Ads API)",
+      "Order data & revenue (Shopify/WooCommerce API)",
+      "Shipping status & costs (WMS/3PL)",
+      "Return requests (Returnly/Loop)"
+    ],
+    outputs: [
+      "Real-time Contribution Margin per order",
+      "True ROAS after returns and shipping",
+      "Aggregated LTV by acquisition channel",
+      "Automated alerts on margin erosion"
+    ]
   },
   {
     id: "saas",
@@ -81,6 +102,24 @@ export const USE_CASES: UseCase[] = [
       { name: "Lead → Paid Velocity", example: "18 days" },
       { name: "Churn Risk Score", example: "Low (0.12)" },
     ],
+    steps: [
+      { title: "Capture Leads", description: "Connect CRM or marketing site forms to pipe in top-of-funnel signups." },
+      { title: "Track Activation", description: "Integrate Mixpanel or PostHog to measure time-to-value and core feature usage." },
+      { title: "Sync Billing", description: "Link Stripe to map activated users to MRR, upgrades, and invoices." },
+      { title: "Monitor Retention", description: "Track active usage against billing to predict churn and identify expansion opportunities." }
+    ],
+    inputs: [
+      "CRM contacts (HubSpot/Salesforce)",
+      "Product events (Mixpanel/PostHog)",
+      "Billing events (Stripe Webhooks)",
+      "Support tickets (Zendesk/Intercom)"
+    ],
+    outputs: [
+      "End-to-end conversion rates by cohort",
+      "Accurate NRR and MRR calculations",
+      "Automated churn risk alerts",
+      "Time-to-value (TTV) metrics"
+    ]
   },
   {
     id: "agencies",
@@ -111,6 +150,24 @@ export const USE_CASES: UseCase[] = [
       { name: "Campaign Delivery Time", example: "12 days" },
       { name: "At-risk Accounts", example: "2 flagged" },
     ],
+    steps: [
+      { title: "Import Contracts", description: "Pull closed-won deals and retainers from your CRM." },
+      { title: "Map Resources", description: "Sync with your resource planning tool to see available capacity." },
+      { title: "Track Time & Costs", description: "Connect Harvest or Toggl to pipe in actual hours worked per client." },
+      { title: "Calculate Margin", description: "Compare billable revenue against internal hourly costs dynamically." }
+    ],
+    inputs: [
+      "Closed deals (Pipedrive/HubSpot)",
+      "Logged hours (Harvest/Toggl)",
+      "Invoices & expenses (QuickBooks/Xero)",
+      "Project milestones (Asana/Monday)"
+    ],
+    outputs: [
+      "Real-time profitability per account",
+      "Team utilization heatmaps",
+      "Budget burn rate warnings",
+      "Revenue forecasting based on capacity"
+    ]
   },
   {
     id: "logistics",
@@ -141,6 +198,24 @@ export const USE_CASES: UseCase[] = [
       { name: "Transit Bottlenecks", example: "1 flagged" },
       { name: "On-time Delivery", example: "91.2%" },
     ],
+    steps: [
+      { title: "Sync Purchase Orders", description: "Import POs from your ERP to initiate tracking." },
+      { title: "Monitor Transit", description: "Connect freight forwarder APIs to track containers and customs status." },
+      { title: "Manage Intake", description: "Link warehouse receiving systems to log inventory arrival and QC." },
+      { title: "Track Last-Mile", description: "Integrate carriers (FedEx, UPS, local couriers) to monitor final delivery SLAs." }
+    ],
+    inputs: [
+      "PO details (SAP/NetSuite)",
+      "Freight tracking data (Flexport/Project44)",
+      "Warehouse receipts (WMS)",
+      "Carrier tracking updates (FedEx/UPS API)"
+    ],
+    outputs: [
+      "Dynamic ETAs for all shipments",
+      "Inventory alerts (stockouts, overstock)",
+      "Carrier performance scorecards",
+      "Customs delay notifications"
+    ]
   },
   {
     id: "finance",
@@ -171,5 +246,23 @@ export const USE_CASES: UseCase[] = [
       { name: "Reconciliation Accuracy", example: "99.8%" },
       { name: "Projected Runway", example: "14.2 months" },
     ],
+    steps: [
+      { title: "Connect Gateways", description: "Pull transaction data from Stripe, PayPal, Square, and wire transfers." },
+      { title: "Calculate Net Payouts", description: "Automatically deduct platform fees, chargebacks, and currency conversion costs." },
+      { title: "Match Bank Statements", description: "Sync with Plaid or Open Banking to reconcile expected payouts with actual deposits." },
+      { title: "Project Cash Flow", description: "Use verified cash positions to forecast runway and working capital needs." }
+    ],
+    inputs: [
+      "Raw transactions (Stripe/PayPal API)",
+      "Fee schedules & chargeback data",
+      "Bank feeds (Plaid/Open Banking)",
+      "Accounts receivable (ERP/Accounting)"
+    ],
+    outputs: [
+      "Automated reconciliation reports",
+      "Discrepancy flags (missing payouts)",
+      "True cash position dashboards",
+      "Dynamic runway forecasting"
+    ]
   },
 ]
