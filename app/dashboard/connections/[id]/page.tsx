@@ -43,7 +43,7 @@ export default function ConnectionDetailPage() {
     return (
       <div className="h-full flex flex-col items-center justify-center">
         <h2 className="text-xl font-bold">Connection Not Found</h2>
-        <Link href="/dashboard/connections" className="mt-4 text-brand hover:underline">
+        <Link href="/dashboard/connections" className="mt-4 text-foreground font-medium hover:underline">
           &larr; Back to Connections
         </Link>
       </div>
@@ -62,13 +62,13 @@ export default function ConnectionDetailPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-secondary/20">
+    <div className="h-full overflow-y-auto">
       <div className="border-b border-border px-6 py-5 flex items-center gap-4 bg-background sticky top-0 z-10">
-        <button onClick={() => router.back()} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+        <button onClick={() => router.back()} className="p-2 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground">
             <Activity className="h-5 w-5" />
           </div>
           <div>

@@ -6,7 +6,7 @@ import { Footer } from "@/components/final-cta"
 import { ArrowRight, CheckCircle2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export function generateStaticParams() {
@@ -15,7 +15,8 @@ export function generateStaticParams() {
   }))
 }
 
-export function generateMetadata({ params }: Props): Metadata {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params
   const useCase = USE_CASES.find((uc) => uc.id === params.id)
   if (!useCase) return { title: "Not Found" }
   return {
@@ -24,7 +25,8 @@ export function generateMetadata({ params }: Props): Metadata {
   }
 }
 
-export default function UseCaseDetailPage({ params }: Props) {
+export default async function UseCaseDetailPage(props: Props) {
+  const params = await props.params
   const useCase = USE_CASES.find((uc) => uc.id === params.id)
 
   if (!useCase) {

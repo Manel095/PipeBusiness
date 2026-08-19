@@ -46,7 +46,7 @@ export default function ConnectionsPage() {
             <Link2 className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold text-foreground">No API connections yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Add a data source to any engine or use <code className="font-mono text-brand">/connect</code> to get started.
+              Add a data source to any engine or use <code className="font-mono font-semibold text-foreground">/connect</code> to get started.
             </p>
           </div>
         ) : (
@@ -58,11 +58,11 @@ export default function ConnectionsPage() {
                 className="group flex flex-col md:flex-row md:items-center justify-between p-5 border border-border bg-card rounded-2xl shadow-sm hover:border-brand/50 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-4 mb-4 md:mb-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-foreground">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-foreground">
                     <Activity className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-base text-foreground group-hover:text-brand transition-colors">{ds.name}</h3>
+                    <h3 className="font-semibold text-base text-foreground transition-colors">{ds.name}</h3>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                       <span className="uppercase tracking-wider font-medium">{ds.type}</span>
                       <span>•</span>
@@ -102,7 +102,7 @@ export default function ConnectionsPage() {
                     <button
                       onClick={(e) => handleSync(e, ds.processId, ds.id)}
                       disabled={ds.status === "syncing"}
-                      className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors disabled:opacity-50"
+                      className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                       title="Sync Now"
                     >
                       <RefreshCw className={`h-4 w-4 ${ds.status === "syncing" ? "animate-spin" : ""}`} />

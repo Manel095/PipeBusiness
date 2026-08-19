@@ -48,7 +48,7 @@ export function SiteNav() {
                       <a
                         key={dropLink.href}
                         href={dropLink.href}
-                        className="block rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+                        className="block rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                       >
                         {dropLink.label}
                       </a>
@@ -56,7 +56,7 @@ export function SiteNav() {
                     <div className="mt-2 border-t border-border pt-2">
                       <a
                         href={l.href}
-                        className="block rounded-lg px-4 py-2 text-sm font-semibold text-brand hover:bg-secondary/50 transition-colors"
+                        className="block rounded-lg px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
                       >
                         View all Use Cases &rarr;
                       </a>
