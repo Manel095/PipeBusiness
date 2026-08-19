@@ -40,7 +40,7 @@ export default async function UseCaseDetailPage(props: Props) {
       <SiteNav />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-secondary/30 pt-20 pb-24">
+        <section className="relative overflow-hidden bg-muted/30 pt-20 pb-24 border-b border-border">
           <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:20px_20px]" />
           <div className="mx-auto max-w-5xl px-5 relative z-10 text-center">
             <div
@@ -107,7 +107,7 @@ export default async function UseCaseDetailPage(props: Props) {
               
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                  <ArrowDownToLine className="h-5 w-5 text-brand" />
+                  <ArrowDownToLine className="h-5 w-5 text-foreground" />
                   Data Inputs
                 </h3>
                 <ul className="space-y-3">
@@ -122,7 +122,7 @@ export default async function UseCaseDetailPage(props: Props) {
 
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                  <ArrowUpFromLine className="h-5 w-5 text-brand" />
+                  <ArrowUpFromLine className="h-5 w-5 text-foreground" />
                   Data Outputs
                 </h3>
                 <ul className="space-y-3">

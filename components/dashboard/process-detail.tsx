@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { X, Trash2, Plus, Webhook, FileSpreadsheet, Keyboard, Globe, Sheet, Zap, Workflow, ArrowDownLeft, ArrowUpRight, Settings2 } from "lucide-react"
+import { X, Trash2, Plus, Webhook, FileSpreadsheet, Keyboard, Globe, Sheet, Zap, Workflow, ArrowDownLeft, ArrowUpRight, Settings2, Calculator } from "lucide-react"
 import { actions, useWorkspace, type SchemaField, type KPIDefinition } from "@/lib/store"
+import { evaluateFormula, extractFormulaFields } from "@/lib/formula"
 
 const STATUS_COLORS: Record<string, string> = {
   active: "#10b981",
@@ -365,65 +366,126 @@ export function ProcessDetail({ processId }: { processId: string }) {
             <p className="text-sm text-muted-foreground">Define the KPIs that matter for this engine. These drive the charts in Intelligence.</p>
             {(config.kpis ?? []).map((kpi, idx) => {
               const lastRow = process.data[process.data.length - 1]
-              const val = lastRow?.[kpi.field]
+              const isCalculated = !!kpi.formula
+              const val = isCalculated && lastRow
+                ? evaluateFormula(kpi.formula!, lastRow)
+                : lastRow?.[kpi.field]
               return (
-                <div key={kpi.id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+                <div key={kpi.id} className={`flex flex-col gap-3 rounded-xl border bg-surface p-4 ${isCalculated ? 'border-border' : 'border-border'}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex flex-col gap-1 w-full">
-                      <input
-                        className="text-sm font-semibold bg-transparent border-b border-dashed border-border outline-none w-full max-w-[200px]"
-                        value={kpi.name}
-                        onChange={(e) => {
-                          const newKpis = [...config.kpis];
-                          newKpis[idx] = { ...kpi, name: e.target.value };
-                          actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
-                        }}
-                        placeholder="KPI Name"
-                      />
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">Field:</span>
+                      <div className="flex items-center gap-2">
+                        {isCalculated && <Calculator className="h-4 w-4 text-muted-foreground" />}
                         <input
-                          className="text-xs font-mono text-brand bg-transparent border-b border-dashed border-border outline-none w-20"
-                          value={kpi.field}
+                          className="text-sm font-semibold bg-transparent border-b border-dashed border-border outline-none w-full max-w-[200px]"
+                          value={kpi.name}
                           onChange={(e) => {
                             const newKpis = [...config.kpis];
-                            newKpis[idx] = { ...kpi, field: e.target.value };
+                            newKpis[idx] = { ...kpi, name: e.target.value };
                             actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
                           }}
-                          placeholder="field_key"
+                          placeholder="KPI Name"
                         />
-                        <select
-                          className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
-                          value={kpi.unit}
-                          onChange={(e) => {
-                            const newKpis = [...config.kpis];
-                            newKpis[idx] = { ...kpi, unit: e.target.value as any };
-                            actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
-                          }}
-                        >
-                          <option value="count">Count</option>
-                          <option value="currency">Currency</option>
-                          <option value="percentage">Percentage</option>
-                          <option value="time">Time</option>
-                        </select>
-                        <select
-                          className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
-                          value={kpi.direction}
-                          onChange={(e) => {
-                            const newKpis = [...config.kpis];
-                            newKpis[idx] = { ...kpi, direction: e.target.value as any };
-                            actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
-                          }}
-                        >
-                          <option value="up">↑ Higher is better</option>
-                          <option value="down">↓ Lower is better</option>
-                        </select>
                       </div>
+
+                      {isCalculated ? (
+                        <div className="mt-2 space-y-2">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Formula:</span>
+                            <input
+                              className="ml-2 text-xs font-mono text-foreground bg-background border border-border rounded-lg px-2 py-1 outline-none w-56 focus:border-foreground/30"
+                              value={kpi.formula || ""}
+                              onChange={(e) => {
+                                const newKpis = [...config.kpis];
+                                const fields = extractFormulaFields(e.target.value);
+                                newKpis[idx] = { ...kpi, formula: e.target.value, formulaFields: fields };
+                                actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                              }}
+                              placeholder="leads - deals_won"
+                            />
+                          </div>
+                          {kpi.formulaFields && kpi.formulaFields.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {kpi.formulaFields.map(f => (
+                                <code key={f} className="text-[10px] bg-background border border-border px-1.5 py-0.5 rounded font-mono">{f}</code>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                              value={kpi.unit}
+                              onChange={(e) => {
+                                const newKpis = [...config.kpis];
+                                newKpis[idx] = { ...kpi, unit: e.target.value as any };
+                                actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                              }}
+                            >
+                              <option value="count">Count</option>
+                              <option value="currency">Currency</option>
+                              <option value="percentage">Percentage</option>
+                              <option value="time">Time</option>
+                            </select>
+                            <select
+                              className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                              value={kpi.direction}
+                              onChange={(e) => {
+                                const newKpis = [...config.kpis];
+                                newKpis[idx] = { ...kpi, direction: e.target.value as any };
+                                actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                              }}
+                            >
+                              <option value="up">↑ Higher is better</option>
+                              <option value="down">↓ Lower is better</option>
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">Field:</span>
+                          <input
+                            className="text-xs font-mono text-foreground bg-transparent border-b border-dashed border-border outline-none w-20"
+                            value={kpi.field}
+                            onChange={(e) => {
+                              const newKpis = [...config.kpis];
+                              newKpis[idx] = { ...kpi, field: e.target.value };
+                              actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                            }}
+                            placeholder="field_key"
+                          />
+                          <select
+                            className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                            value={kpi.unit}
+                            onChange={(e) => {
+                              const newKpis = [...config.kpis];
+                              newKpis[idx] = { ...kpi, unit: e.target.value as any };
+                              actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                            }}
+                          >
+                            <option value="count">Count</option>
+                            <option value="currency">Currency</option>
+                            <option value="percentage">Percentage</option>
+                            <option value="time">Time</option>
+                          </select>
+                          <select
+                            className="text-xs bg-transparent border-b border-dashed border-border outline-none text-muted-foreground"
+                            value={kpi.direction}
+                            onChange={(e) => {
+                              const newKpis = [...config.kpis];
+                              newKpis[idx] = { ...kpi, direction: e.target.value as any };
+                              actions.updateProcess(processId, { config: { ...config, kpis: newKpis } });
+                            }}
+                          >
+                            <option value="up">↑ Higher is better</option>
+                            <option value="down">↓ Lower is better</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {val !== undefined && (
+                      {val !== undefined && !isNaN(Number(val)) && (
                         <span className="text-lg font-extrabold text-foreground bg-background px-2 py-1 rounded-lg border border-border">
-                          {kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` : kpi.unit === "percentage" ? `${val}%` : Number(val).toLocaleString()}
+                          {kpi.unit === "currency" ? `$${Number(val).toLocaleString()}` : kpi.unit === "percentage" ? `${Number(val).toFixed(1)}%` : Number(val).toLocaleString()}
                         </span>
                       )}
                       <button
@@ -441,16 +503,49 @@ export function ProcessDetail({ processId }: { processId: string }) {
                 </div>
               )
             })}
-            <button
-              type="button"
-              onClick={() => {
-                const newKpi: KPIDefinition = { id: `kpi-${Date.now()}`, name: "New KPI", field: "new_field", unit: "count", direction: "up" }
-                actions.updateProcess(processId, { config: { ...config, kpis: [...(config.kpis ?? []), newKpi] } })
-              }}
-              className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-brand hover:text-brand w-full"
-            >
-              <Plus className="h-4 w-4" /> Add KPI
-            </button>
+
+            {/* Available fields hint */}
+            {process.data.length > 0 && (
+              <div className="rounded-xl border border-border bg-background p-3">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium block mb-1.5">Available fields for formulas</span>
+                <div className="flex flex-wrap gap-1">
+                  {Object.keys(process.data[0]).filter(k => k !== "date").map(k => (
+                    <code key={k} className="text-[10px] bg-surface border border-border px-1.5 py-0.5 rounded font-mono text-foreground">{k}</code>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newKpi: KPIDefinition = { id: `kpi-${Date.now()}`, name: "New KPI", field: "new_field", unit: "count", direction: "up" }
+                  actions.updateProcess(processId, { config: { ...config, kpis: [...(config.kpis ?? []), newKpi] } })
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground flex-1"
+              >
+                <Plus className="h-4 w-4" /> Add KPI
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newKpi: KPIDefinition = {
+                    id: `kpi-${Date.now()}`,
+                    name: "Calculated KPI",
+                    field: "_calculated",
+                    unit: "count",
+                    direction: "up",
+                    formula: "",
+                    formulaFields: [],
+                  }
+                  actions.updateProcess(processId, { config: { ...config, kpis: [...(config.kpis ?? []), newKpi] } })
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground flex-1"
+              >
+                <Calculator className="h-4 w-4" /> Add Calculated KPI
+              </button>
+            </div>
           </div>
         )}
       </div>

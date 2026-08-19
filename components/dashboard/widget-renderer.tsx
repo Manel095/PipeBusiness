@@ -44,8 +44,22 @@ export function WidgetRenderer({ widget }: { widget: WidgetConfig }) {
     )
   } else if (widget.type === "metric") {
     const data = process.data
-    const current = data.length > 0 ? Number(data[data.length - 1][widget.field!] ?? 0) : 0
-    const previous = data.length > 1 ? Number(data[data.length - 2][widget.field!] ?? current) : current
+    
+    // Check if this field corresponds to a calculated KPI
+    const kpiDef = process.config?.kpis?.find(k => k.field === widget.field || k.name === widget.title)
+    const isCalculated = kpiDef?.formula
+
+    let current = 0
+    let previous = 0
+
+    if (isCalculated && kpiDef?.formula) {
+      const { evaluateFormula } = require("@/lib/formula")
+      current = data.length > 0 ? evaluateFormula(kpiDef.formula, data[data.length - 1]) : 0
+      previous = data.length > 1 ? evaluateFormula(kpiDef.formula, data[data.length - 2]) : current
+    } else {
+      current = data.length > 0 ? Number(data[data.length - 1][widget.field!] ?? 0) : 0
+      previous = data.length > 1 ? Number(data[data.length - 2][widget.field!] ?? current) : current
+    }
     
     const delta = previous !== 0 ? ((current - previous) / previous * 100) : 0
     const trend = delta >= 0 ? "up" : "down"
@@ -54,10 +68,12 @@ export function WidgetRenderer({ widget }: { widget: WidgetConfig }) {
       <div className="flex h-full w-full flex-col justify-center p-5">
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{widget.title || widget.field}</p>
         <div className="mt-2 flex items-baseline gap-3">
-          <span className="text-3xl font-black tracking-tight">{current.toLocaleString()}</span>
-          <span className={`text-sm font-bold flex items-center gap-1 ${trend === "up" ? "text-emerald-500 bg-emerald-500/10" : "text-rose-500 bg-rose-500/10"} px-1.5 py-0.5 rounded-md`}>
-            {trend === "up" ? "↑" : "↓"} {Math.abs(delta).toFixed(1)}%
-          </span>
+          <span className="text-3xl font-black tracking-tight">{isNaN(current) ? "N/A" : current.toLocaleString()}</span>
+          {!isNaN(delta) && (
+            <span className={`text-sm font-bold flex items-center gap-1 ${trend === "up" ? "text-emerald-500 bg-emerald-500/10" : "text-rose-500 bg-rose-500/10"} px-1.5 py-0.5 rounded-md`}>
+              {trend === "up" ? "↑" : "↓"} {Math.abs(delta).toFixed(1)}%
+            </span>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-2 font-medium">vs previous {widget.period || "period"}</p>
       </div>

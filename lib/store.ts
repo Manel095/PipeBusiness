@@ -1,6 +1,7 @@
 "use client"
 
 import { useSyncExternalStore } from "react"
+import type { TransformRule } from "@/lib/formula"
 
 /* ─── types ─── */
 export type Position = { x: number; y: number }
@@ -19,6 +20,8 @@ export type DataSource = {
   nextSync?: number
   status?: "connected" | "syncing" | "error"
   logs?: { timestamp: number; message: string; rowsAffected?: number }[]
+  transforms?: TransformRule[]
+  samplePayload?: string
 }
 
 export type DataRow = Record<string, string | number>
@@ -44,6 +47,8 @@ export type KPIDefinition = {
   field: string
   unit: "currency" | "percentage" | "count" | "time"
   direction: "up" | "down"
+  formula?: string
+  formulaFields?: string[]
 }
 
 export type EngineConfig = {
