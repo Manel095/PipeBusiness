@@ -14,6 +14,11 @@ export type DataSource = {
   config: Record<string, string>
   entityType?: string
   createdAt: number
+  syncSchedule?: "manual" | "hourly" | "daily" | "weekly"
+  lastSync?: number
+  nextSync?: number
+  status?: "connected" | "syncing" | "error"
+  logs?: { timestamp: number; message: string; rowsAffected?: number }[]
 }
 
 export type DataRow = Record<string, string | number>
@@ -490,6 +495,55 @@ export const actions = {
       ),
     }
     emit()
+  },
+
+  updateDataSource(processId: string, dsId: string, patch: Partial<DataSource>) {
+    state = {
+      ...state,
+      processes: state.processes.map((p) =>
+        p.id === processId
+          ? {
+              ...p,
+              dataSources: p.dataSources.map((ds) =>
+                ds.id === dsId ? { ...ds, ...patch } : ds
+              ),
+            }
+          : p
+      ),
+    }
+    emit()
+  },
+
+  triggerDataSourceSync(processId: string, dsId: string) {
+    // 1. Mark as syncing
+    this.updateDataSource(processId, dsId, { status: "syncing" })
+    
+    // 2. Simulate API call
+    setTimeout(() => {
+      const now = Date.now()
+      const isError = Math.random() < 0.1 // 10% chance of error
+      
+      const newLog = {
+        timestamp: now,
+        message: isError ? "Failed to fetch data from API" : "Successfully synced data",
+        rowsAffected: isError ? 0 : Math.floor(Math.random() * 50) + 1,
+      }
+      
+      // We need to fetch the latest state directly from state
+      const p = state.processes.find(pr => pr.id === processId)
+      const ds = p?.dataSources.find(d => d.id === dsId)
+      
+      if (ds) {
+        actions.updateDataSource(processId, dsId, {
+          status: isError ? "error" : "connected",
+          lastSync: now,
+          nextSync: ds.syncSchedule === "hourly" ? now + 3600000 
+                  : ds.syncSchedule === "daily" ? now + 86400000 
+                  : undefined,
+          logs: [newLog, ...(ds.logs || [])].slice(0, 10), // keep last 10
+        })
+      }
+    }, 1500)
   },
 
   addDataRows(processId: string, rows: DataRow[]) {

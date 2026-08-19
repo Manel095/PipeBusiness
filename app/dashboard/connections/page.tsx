@@ -2,18 +2,33 @@
 
 import { useState } from "react"
 import { useWorkspace, actions } from "@/lib/store"
-import { ArrowRight, Plus, Trash2, Activity, Link2 } from "lucide-react"
+import { Plus, Link2, Activity, MoreVertical, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
+import Link from "next/link"
 
 export default function ConnectionsPage() {
   const workspace = useWorkspace()
 
+  // Aggregate all DataSources (API Connections) from all processes
+  const allDataSources = workspace.processes.flatMap(p => 
+    p.dataSources.map(ds => ({
+      ...ds,
+      processName: p.name,
+      processId: p.id
+    }))
+  )
+
+  const handleSync = (e: React.MouseEvent, processId: string, dsId: string) => {
+    e.preventDefault() // prevent navigating to detail page
+    actions.triggerDataSourceSync(processId, dsId)
+  }
+
   return (
     <div className="h-full overflow-y-auto">
-      <div className="border-b border-border px-6 py-5 flex items-center justify-between">
+      <div className="border-b border-border px-6 py-5 flex items-center justify-between bg-background sticky top-0 z-10">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Connectors</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">API Connections</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage the data pipes between your engines. Each connector defines what data flows from one engine to another.
+            Manage your external data sources and sync schedules across all engines.
           </p>
         </div>
         <button
@@ -21,95 +36,84 @@ export default function ConnectionsPage() {
           onClick={() => actions.toggleCommandPalette(true)}
         >
           <Plus className="h-4 w-4" />
-          New Connector
+          Add Integration
         </button>
       </div>
 
       <div className="p-6 max-w-5xl mx-auto space-y-6">
-        {workspace.connectors.length === 0 ? (
+        {allDataSources.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border border-dashed border-border rounded-2xl bg-surface/50">
             <Link2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold text-foreground">No connectors yet</p>
+            <p className="text-lg font-semibold text-foreground">No API connections yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Draw a line between two engines on the canvas, or use <code className="font-mono text-brand">/connect</code> in the command bar.
+              Add a data source to any engine or use <code className="font-mono text-brand">/connect</code> to get started.
             </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {workspace.connectors.map((conn) => {
-              const fromProc = workspace.processes.find(p => p.id === conn.from)
-              const toProc = workspace.processes.find(p => p.id === conn.to)
-              if (!fromProc || !toProc) return null
-
-              return (
-                <div key={conn.id} className="flex items-center justify-between p-5 border border-border bg-background rounded-2xl shadow-sm hover:border-brand/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    {/* Source Engine */}
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold uppercase"
-                        style={{ background: `${fromProc.color}15`, color: fromProc.color }}
-                      >
-                        {fromProc.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{fromProc.name}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">{fromProc.config?.engineType ?? "engine"}</p>
-                      </div>
+            {allDataSources.map((ds) => (
+              <Link 
+                href={`/dashboard/connections/${ds.id}`}
+                key={ds.id} 
+                className="group flex flex-col md:flex-row md:items-center justify-between p-5 border border-border bg-card rounded-2xl shadow-sm hover:border-brand/50 hover:shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-4 mb-4 md:mb-0">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-foreground">
+                    <Activity className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-base text-foreground group-hover:text-brand transition-colors">{ds.name}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <span className="uppercase tracking-wider font-medium">{ds.type}</span>
+                      <span>•</span>
+                      <span>Connected to: <span className="font-medium text-foreground">{ds.processName}</span></span>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Arrow + Connector Name */}
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs font-bold text-brand bg-brand/10 px-3 py-1 rounded-full mb-1">{conn.name}</span>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-6">
+                  {/* Status & Sync Info */}
+                  <div className="text-right flex flex-col items-end">
+                    <div className="flex items-center gap-2 mb-1">
+                      {ds.status === "syncing" ? (
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Syncing
+                        </span>
+                      ) : ds.status === "error" ? (
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                          <AlertCircle className="h-3 w-3" />
+                          Error
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Active
+                        </span>
+                      )}
                     </div>
-
-                    {/* Target Engine */}
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold uppercase"
-                        style={{ background: `${toProc.color}15`, color: toProc.color }}
-                      >
-                        {toProc.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{toProc.name}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">{toProc.config?.engineType ?? "engine"}</p>
-                      </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {ds.lastSync ? `Last synced: ${new Date(ds.lastSync).toLocaleTimeString()}` : 'Never synced'}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    {/* Fields flowing */}
-                    <div className="text-right">
-                      {conn.dataFlowFields.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 justify-end max-w-[200px]">
-                          {conn.dataFlowFields.map(f => (
-                            <code key={f} className="text-[10px] bg-surface border border-border px-1.5 py-0.5 rounded font-mono">{f}</code>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No fields mapped</span>
-                      )}
-                    </div>
-
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => actions.openConnectorModal(conn.id)}
-                      className="text-xs font-semibold text-brand bg-brand/10 px-3 py-1.5 rounded-lg hover:bg-brand/20 transition-colors"
+                      onClick={(e) => handleSync(e, ds.processId, ds.id)}
+                      disabled={ds.status === "syncing"}
+                      className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors disabled:opacity-50"
+                      title="Sync Now"
                     >
-                      Edit
+                      <RefreshCw className={`h-4 w-4 ${ds.status === "syncing" ? "animate-spin" : ""}`} />
                     </button>
-
-                    <button
-                      onClick={() => actions.removeConnector(conn.id)}
-                      className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                    <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
+                      <MoreVertical className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              )
-            })}
+              </Link>
+            ))}
           </div>
         )}
       </div>
